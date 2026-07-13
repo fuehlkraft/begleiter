@@ -814,16 +814,18 @@ const CALENDAR_IDEA_TEMPLATES = [
 
 function storyPlanSystemPrompt(productInfo){
   const productBlock = productInfo && productInfo.trim() ? `\n\nPRODUKTWISSEN:\n${productInfo.trim()}\n` : '';
-  return `Du erstellst einen 7-Tage-Plan für Instagram-Storys für jemanden, der nicht jeden Tag ein Reel postet, aber trotzdem seine Wunschkundin durch die Woche mitnehmen möchte.${productBlock}
+  return `Du erstellst einen 7-Tage-Plan für Instagram-Storys für jemanden, der nicht jeden Tag ein Reel postet, aber trotzdem seine Wunschkundin durch die Woche mitnehmen möchte. Die Person lernt dieses Format gerade erst und braucht ein echtes Gefühl dafür, was konkret zu tun ist — keine abstrakten Stichworte.${productBlock}
 
-GRUNDREGEL: Von 7 Tagen ist GENAU EIN Tag ein klarer Verkaufstag (setze "salesDay": true, am besten Tag 6 oder 7). Die anderen 6 Tage bauen Beziehung, Vertrauen und Wiedererkennung auf, OHNE zu verkaufen — Persönliches, ein kleiner Mehrwert-Tipp, ein Problem/Pain-Point ansprechen, Social Proof (z.B. Reaktion einer Kundin), ein verletzlicher/ehrlicher Moment, Interaktion. Variiere die Tagesthemen, wiederhole dich nicht.
+GRUNDREGEL: Von 7 Tagen ist GENAU EIN Tag ein klarer Verkaufstag (setze "salesDay": true, am besten Tag 6 oder 7). Die anderen 6 Tage bauen Beziehung, Vertrauen und Wiedererkennung auf, OHNE zu verkaufen — Persönliches, ein kleiner Mehrwert-Tipp, ein Problem/Pain-Point ansprechen, Social Proof (z.B. Reaktion einer Kundin), ein verletzlicher/ehrlicher Moment, Interaktion. Nutze dabei aktiv konkrete Details aus dem Produktwissen (z.B. einen bestimmten Bereich des Kalenders wie den Allergie-Kalender oder die Achtsamkeit mit dem Pferd), statt allgemein zu bleiben. Variiere die Tagesthemen, wiederhole dich nicht.
 
-Jeder Tag hat GENAU 3 Story-Beats (Aufhänger, Inhalt, Interaktion) — außer der Verkaufstag, dort ersetzt ein klarer, direkter Call-to-Action (Link-Sticker) den dritten Beat. Jeder Beat ist nur eine kurze, konkrete IDEE (kein ausformulierter Text, max. 15 Wörter), was gezeigt oder gefragt wird — die Person füllt das selbst mit eigenen Bildern/Worten.
+Jeder Tag hat GENAU 3 Story-Beats (Aufhänger, Inhalt, Interaktion) — außer der Verkaufstag, dort ersetzt ein klarer, direkter Call-to-Action (Link-Sticker) den dritten Beat. Jeder Beat hat ZWEI Teile:
+- "idea": eine ausführlichere Beschreibung (2-3 Sätze), WAS genau gezeigt/gefilmt wird und WARUM das an diesem Punkt der Woche funktioniert — konkret genug, dass die Person sofort ein Bild vor Augen hat, nicht nur ein Stichwort.
+- "text": ein konkreter Beispieltext zum direkten Verwenden — der gesprochene Satz, die Sticker-Frage im genauen Wortlaut, oder der Caption-Text, den man eins zu eins übernehmen oder leicht anpassen kann.
 
 SEHR WICHTIG FÜR GÜLTIGES JSON: Verwende in keinem Textwert doppelte Anführungszeichen ("). Wenn du wörtliche Sätze oder Sticker-Texte zitieren willst, nutze stattdessen einfache Anführungszeichen (') oder gar keine. Keine Zeilenumbrüche innerhalb eines Textwerts.
 
 Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt, ohne Einleitung, ohne Markdown, ohne Rückfrage:
-{"days":[{"day":1,"theme":"kurzer Titel für den Tag","salesDay":false,"beats":[{"type":"Aufhänger","idea":"kurze konkrete Idee"},{"type":"Inhalt","idea":"kurze konkrete Idee"},{"type":"Interaktion","idea":"kurze konkrete Idee, z.B. Umfrage-Sticker mit genauem Wortlaut in einfachen Anführungszeichen"}]}, ... insgesamt genau 7 Einträge, Tag 1 bis Tag 7]}
+{"days":[{"day":1,"theme":"kurzer Titel für den Tag","salesDay":false,"beats":[{"type":"Aufhänger","idea":"ausführliche Beschreibung, was gezeigt wird und warum","text":"konkreter Beispieltext"},{"type":"Inhalt","idea":"...","text":"..."},{"type":"Interaktion","idea":"...","text":"z.B. genauer Wortlaut für einen Umfrage- oder Frage-Sticker"}]}, ... insgesamt genau 7 Einträge, Tag 1 bis Tag 7]}
 Auf Deutsch.
 
 ${noGoInstructionText()}`;
@@ -2513,17 +2515,22 @@ function storyPlansListHtml(){
         <button class="star-btn" data-delplan="${p.id}" title="Löschen">✕</button>
       </div>
       ${p.days.map(d=>`
-        <div style="padding:10px 0;border-top:1px dashed var(--border);">
+        <div style="padding:12px 0;border-top:1px dashed var(--border);">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
               <input type="checkbox" data-plandaydone="${p.id}:${d.day}" ${d.done?'checked':''}>
-              <strong style="font-size:13.5px;${d.done?'text-decoration:line-through;color:var(--text-faint);':''}">Tag ${d.day} — ${escapeHtml(d.theme)}</strong>
+              <strong style="font-size:13.5px;${d.done?'text-decoration:line-through;color:var(--text-faint);':''}">Tag ${d.day}: ${escapeHtml(d.theme)}</strong>
             </label>
             ${d.salesDay ? `<span class="pill" style="background:var(--ochre);color:#fff;">Verkaufstag</span>` : ''}
           </div>
-          <ul style="margin:8px 0 0 26px;padding:0;list-style:none;font-size:13px;line-height:1.7;color:var(--text-soft);">
-            ${d.beats.map(b=>`<li><strong style="color:var(--text);">${escapeHtml(b.type)}:</strong> ${escapeHtml(b.idea)}</li>`).join('')}
-          </ul>
+          <div style="margin:10px 0 0 26px;">
+            ${d.beats.map(b=>`
+              <div style="margin-bottom:12px;">
+                <div style="font-size:12.5px;font-weight:600;color:var(--forest);">${escapeHtml(b.type)}</div>
+                <div style="font-size:13px;line-height:1.65;color:var(--text-soft);margin-top:2px;">${escapeHtml(b.idea||'')}</div>
+                ${b.text ? `<div style="font-size:13px;line-height:1.6;margin-top:5px;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius-sm);font-style:italic;">„${escapeHtml(b.text)}"</div>` : ''}
+              </div>`).join('')}
+          </div>
         </div>`).join('')}
     </div>`).join('');
 }
@@ -2559,7 +2566,7 @@ function wireStoryPlanActions(root){
           const content = attempt===0
             ? 'Bitte erstelle den 7-Tage-Plan.'
             : 'Bitte erstelle den 7-Tage-Plan neu. Antworte NUR mit dem JSON-Objekt, keine Rückfrage, keine doppelten Anführungszeichen innerhalb der Textwerte, halte jede Idee unter 15 Wörtern.';
-          const raw = await callClaude(storyPlanSystemPrompt(State.productInfo), [{role:'user', content}], 1800);
+          const raw = await callClaude(storyPlanSystemPrompt(State.productInfo), [{role:'user', content}], 3000);
           parsed = extractObj(raw);
         }catch(err){ lastErr = err; }
       }
