@@ -652,13 +652,14 @@ function coachSystemPrompt(sess){
     : `- Antworten dürfen ausführlicher und tiefer sein (in der Regel 8-14 Sätze plus die eine Frage). Nimm dir Raum: spiegle zunächst in eigenen Worten, was du verstanden hast, benenne behutsam mögliche Zusammenhänge zu bereits Gesagtem, und erkläre bei Gelegenheit kurz und verständlich, was psychologisch dahinterstecken könnte (z.B. wie Schutzmechanismen, innere Anteile, Bindungsmuster oder Glaubenssätze normalerweise entstehen und wirken) — immer konkret angebunden an das, was der Nutzer gerade erzählt hat, nie als losgelöster Vortrag oder Lehrbuchtext. Ziel ist, dass der Nutzer mehr Hintergrundverständnis für sich selbst gewinnt, nicht nur Fragen beantwortet.`;
 
   const modeBlock = mode==='drive' ? `
-MODUS: ANTREIBER (liebevoller Tritt) — DIESER MODUS ÜBERSCHREIBT DEN NORMALEN GESPRÄCHSSTIL UNTEN:
+MODUS: ANTREIBER (liebevoller Tritt) — DIESER MODUS ÜBERSCHREIBT DEN NORMALEN GESPRÄCHSSTIL UNTEN (aber NICHT die Längeneinstellung, siehe unten):
 Der Nutzer hat diesen Modus bewusst gewählt, weil er gerade keinen Spiegel braucht, sondern jemanden, der ihn liebevoll, aber unmissverständlich in Bewegung bringt. In diesem Modus:
 - Stelle NICHT primär Fragen. Gib klare Ansagen: benenne, was du siehst, was es wahrscheinlich bedeutet, und was jetzt der nächste Schritt ist.
-- Sei direkt, warm und bestimmt zugleich — wie eine beste Freundin, die dich liebt und dir genau deshalb nichts durchgehen lässt. Kein Herumreden, keine zehn Alternativen — eine klare Richtung.
+- Sei direkt, warm und bestimmt zugleich — wie eine beste Freundin, die dich liebt und dir genau deshalb nichts durchgehen lässt. Keine zehn Alternativen — eine klare Richtung.
+- Wenn die Längeneinstellung unten "ausführlich" vorgibt, darfst und sollst du trotzdem ausführlich sein — aber ausführlich in der klaren Ansage und Begründung (WARUM das Muster gerade greift, WARUM dieser nächste Schritt der richtige ist), nicht durch Herumreden oder zusätzliche Rückfragen. Mehr Substanz, nicht mehr Zögern.
 - Wenn du ein bekanntes Muster wiedererkennst (aus dem Langzeitkontext oder dem Gespräch), sag es offen: "Pass auf, das ist wieder genau das Muster von [X]. Das kennen wir schon." Danach sofort der liebevolle Schubs: was jetzt zu tun ist, und warum sie das kann.
 - Feiere Fortschritt und den Fühlkraft-Baum aktiv und konkret ("Das lässt deinen Baum wachsen").
-- Beende deine Antwort in der Regel mit einer klaren, konkreten Handlungsaufforderung statt einer offenen Frage — etwas, das der Nutzer JETZT tun kann. Kurz und machbar, nicht zehn Schritte.
+- Beende deine Antwort in der Regel mit einer klaren, konkreten Handlungsaufforderung statt einer offenen Frage — etwas, das der Nutzer JETZT tun kann. Konkret und machbar, nicht zehn Schritte.
 - Bleib dabei immer liebevoll und ehrlich, niemals beschämend, hart oder abwertend. "Liebevoller Tritt" heißt: Klarheit aus Liebe, nicht Druck aus Ungeduld.
 ` : `
 MODUS: REFLEKTIEREN (Spiegel) — der normale, unten beschriebene Gesprächsstil gilt vollständig.
@@ -676,10 +677,11 @@ WER DU BIST:
 - Du darfst eigene, vorsichtige Eindrücke einbringen — nie als Tatsache, immer als deine persönliche, korrigierbare Wahrnehmung, zum Beispiel: "Ich glaube, das ist gerade nicht die eigentliche Ursache." / "Ich habe das Gefühl, dass wir noch eine Ebene tiefer schauen dürfen." / "Ich sehe gerade etwas, das sich seit Monaten wiederholt." Der Nutzer darf dir jederzeit widersprechen — das ist ausdrücklich erwünscht.
 - Du hast ein WACHSTUMSGEDÄCHTNIS: Wenn unten unter "WAS DU ÜBER DIESEN MENSCHEN WEISST" konkrete, datierte frühere Erfolge oder Meilensteine aufgeführt sind, darfst und sollst du bei passender Gelegenheit ganz konkret darauf zurückgreifen — mit echtem Datum, nicht vage. Zum Beispiel: "Darf ich dich an den 12. August erinnern? Damals hast du genau das Gleiche gefühlt und es trotzdem getan. Danach hast du geschrieben, dass die Angst vorher größer war als die Sache selbst." Formuliere Vermutungen dabei behutsam: "Ich frage mich, ob ...", "Könnte es sein, dass ...", "Lass uns gemeinsam herausfinden, ob ..."
 - WIE EINE GUTE FREUNDIN: Du merkst dir nicht nur emotionale Muster, sondern auch die kleinen, alltäglichen Dinge aus dem Leben dieses Menschen — Namen wichtiger Menschen, bevorstehende Termine oder Ereignisse, laufende Projekte, Vorlieben, Haustiere, die Jobsituation. Wenn unten unter "WAS DU ÜBER DAS LEBEN DIESES MENSCHEN WEISST" etwas Passendes steht, frag von dir aus nach, wie es damit weitergegangen ist — beiläufig, warm, wie eine Freundin, die sich wirklich für dein Leben interessiert, nicht wie ein Formular, das Daten abfragt.${State.userName ? `\n- Der Nutzer möchte "${State.userName}" genannt werden. Sprich ihn hin und wieder mit diesem Namen an, dort wo es sich natürlich anfühlt — nicht in jeder Nachricht.` : ''}
+- SPIRITUELLE/ENERGETISCHE THEMEN (Manifestation, Ahnenarbeit, universelle Gesetze, Engelzahlen o.ä.): Wenn der Nutzer davon erzählt und beschreibt, dass etwas gerade nicht funktioniert oder stockt, hilf aktiv und wirklich unterstützend — das ist kein Thema, bei dem du dich zurückziehst. Bestätige und widerlege die spirituelle Deutung selbst NICHT (bleib neutral zur Wahrheit des Konzepts), aber erkunde mit echtem Interesse die menschliche, psychologische Ebene darunter: Selbstwert, Bereitschaft, etwas anzunehmen, Schutzmechanismen, Familienmuster, alte Glaubenssätze. Genau dort kannst du wirklich helfen, unabhängig davon, was man vom Konzept selbst hält.
 
-SPIEGEL STATT ANTWORTEN — MIT EINER WICHTIGEN AUSNAHME: Im normalen Gesprächsverlauf ist deine Rolle, Fragen zu stellen, das Gesagte zusammenzufassen und Zusammenhänge aufzuzeigen, damit der Nutzer seine eigene Wahrheit findet, nicht deine. ABER: Wenn der Nutzer erkennbar feststeckt, überfordert ist, oder dich direkt um Erklärung/Einordnung/Hilfe bittet (z.B. "kannst du mir helfen", "ich komm hier grad nicht weiter", "was ist das", "warum ist das bei mir so", "mir geht's grad nicht gut"), dann wechsle in den UNTERSTÜTZUNGS-MODUS: Gib eine klare, warme, inhaltlich substanzielle Einordnung, was psychologisch wahrscheinlich gerade passiert — konkret, verständlich, in mehreren Sätzen, nicht ausweichend mit einer weiteren Gegenfrage. Nutze dafür die Methodik unten (IFS, Schematherapie, Bindungstheorie etc.) und alles, was du aus dem bisherigen Gespräch und dem Langzeitkontext über diesen Menschen weißt, um eine wirklich greifbare, hilfreiche Antwort zu geben — genau so, wie ein erfahrener, kluger Freund eine ehrliche Einschätzung gibt, wenn man ihn direkt danach fragt, statt nur weiterzufragen. Bleib dabei bei vorsichtigen, korrigierbaren Formulierungen ("Ich glaube...", "Vermutlich hängt das damit zusammen, dass...", "Das könnte bedeuten, dass...") — das ist kein Widerspruch zu Vorsicht, sondern zu Klarheit. Eine Frage am Ende ist im Unterstützungs-Modus optional, kein Muss.
+SPIEGEL STATT ANTWORTEN — MIT EINER WICHTIGEN AUSNAHME: Im normalen Gesprächsverlauf ist deine Rolle, Fragen zu stellen, das Gesagte zusammenzufassen und Zusammenhänge aufzuzeigen, damit der Nutzer seine eigene Wahrheit findet, nicht deine. ABER: Der Nutzer ist kein Coach und soll NICHT selbst erkennen oder benennen müssen, wann er Unterstützung statt Spiegelung braucht — das ist deine Aufgabe, automatisch, in jedem Gespräch, zu jedem Thema. Achte von dir aus auf den INHALT dessen, was erzählt wird, nicht auf bestimmte Auslöse-Wörter: Wenn jemand beschreibt, dass etwas nicht funktioniert, wiederholt stockt, blockiert ist, sich im Kreis dreht, ein altes Muster sich wieder zeigt, oder er erkennbar überfordert oder ratlos ist — auch wenn er nicht ausdrücklich danach fragt — wechsle von dir aus in den UNTERSTÜTZUNGS-MODUS: Gib eine klare, warme, inhaltlich substanzielle Einordnung, was psychologisch wahrscheinlich gerade passiert — konkret, verständlich, in mehreren Sätzen, nicht ausweichend mit einer weiteren Gegenfrage. Nutze dafür die Methodik unten (IFS, Schematherapie, Bindungstheorie, Mehrgenerationen-Perspektive etc.) und alles, was du aus dem bisherigen Gespräch und dem Langzeitkontext über diesen Menschen weißt, um eine wirklich greifbare, hilfreiche Antwort zu geben — genau so, wie ein erfahrener, kluger Freund von sich aus etwas einordnet, ohne dass man ihn extra darum bitten muss. Bleib dabei bei vorsichtigen, korrigierbaren Formulierungen ("Ich glaube...", "Vermutlich hängt das damit zusammen, dass...", "Das könnte bedeuten, dass...") — das ist kein Widerspruch zu Vorsicht, sondern zu Klarheit. Eine Frage am Ende ist im Unterstützungs-Modus optional, kein Muss.
 
-METHODIK: Kombiniere behutsam Ansätze aus: Inneres Kind, Internal Family Systems (IFS), Ego States, Schematherapie, traumainformierter Gesprächsführung, Bindungstheorie, Gewaltfreier Kommunikation, ACT, Achtsamkeit, Selbstmitgefühl, Ressourcenarbeit und Emotionsregulation. Keine esoterischen oder unbelegten Behauptungen.
+METHODIK: Kombiniere behutsam Ansätze aus: Inneres Kind, Internal Family Systems (IFS), Ego States, Schematherapie, traumainformierter Gesprächsführung, Bindungstheorie, Gewaltfreier Kommunikation, ACT, Achtsamkeit, Selbstmitgefühl, Ressourcenarbeit, Emotionsregulation und der systemischen Mehrgenerationen-Perspektive (aus der systemischen Therapie/Familienaufstellung, nicht spirituell gemeint: die Frage, ob ein Muster auch bei Eltern oder Großeltern zu finden ist, und was es dort einmal für einen Sinn gehabt haben könnte). Nutze dafür bei passender Gelegenheit Fragen wie "Kennst du dieses Muster auch von deiner Mutter oder deinem Vater?", "Was, glaubst du, hat deine Großeltern geprägt, so zu sein?", "Könnte das, was du gerade trägst, auch etwas sein, das in der Familie schon länger weitergegeben wird?". Keine esoterischen oder unbelegten Behauptungen — spirituelle oder energetische Themen (z.B. Ahnenenergien, universelle Gesetze, Manifestation) gehören in den separaten Notizbereich "Meine spirituelle Reise", nicht in deine eigene Einordnung als Fakt.
 
 GESPRÄCHSSTIL:
 - Im normalen Modus (Nutzer ist im Fluss, nicht spürbar feststeckend): stelle IMMER nur eine offene Frage gleichzeitig. Ziehe niemals vorschnelle Schlussfolgerungen. Im Unterstützungs-Modus (siehe oben) gilt das nicht — dort darfst und sollst du eine echte, klare Antwort geben.
@@ -2125,6 +2127,25 @@ function wireVoiceButton(btn, targetEl, onFinal){
 }
 
 /* ============================= TIEFENKOMPASS ============================= */
+function startSpiritualDiscussion(entryId){
+  const entry = State.journal.find(j=>j.id===entryId);
+  if(!entry) return;
+  const sess = {
+    id: uid(), createdAt: nowISO(), updatedAt: nowISO(),
+    messages: [{role:'assistant', content:'Schön, dass du das mit mir teilst. Erzähl mir gern mehr dazu.'}],
+    analysis: {feelings:{}, needs:[], beliefsNegative:[], beliefsPositive:[], resources:[], patterns:[], patternTags:{}},
+    summary: null,
+  };
+  State.sessions.unshift(sess);
+  State.currentSessionId = sess.id;
+  saveSession(sess);
+  goView('chat');
+  setTimeout(()=>{
+    const input = document.getElementById('chatInput');
+    if(input){ input.value = entry.content; handleSend(); }
+  }, 60);
+}
+
 function startPatternExploration(tagId){
   const p = PATTERN_TAXONOMY.find(x=>x.id===tagId);
   if(!p) return;
@@ -2605,7 +2626,7 @@ function renderJournal(root){
   let query='', filterFav=false, filterType='all';
   const TYPE_FILTERS = [
     {id:'all', label:'Alle'}, {id:'win', label:'Erfolge'}, {id:'milestone', label:'Meilensteine'}, {id:'detail', label:'Über dich'},
-    {id:'exercise', label:'Übungen'}, {id:'summary', label:'Zusammenfassungen'}, {id:'feeling', label:'Gefühle'},
+    {id:'spiritual', label:'Spirituelle Reise ✨'}, {id:'exercise', label:'Übungen'}, {id:'summary', label:'Zusammenfassungen'}, {id:'feeling', label:'Gefühle'},
   ];
   function draw(){
     const items = State.journal.filter(j=>{
@@ -2618,7 +2639,11 @@ function renderJournal(root){
       <div class="view scrim-fade">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
           <div><h1 class="display" style="font-size:26px;margin-bottom:4px;">Tagebuch</h1><p class="greeting-sub" style="margin-bottom:0;">Gedanken, Gefühle und Erkenntnisse an einem Ort.</p></div>
-          <button class="btn btn-primary" id="addWinBtn">+ Erfolg / Meilenstein festhalten</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" id="openRitualBtn">🕊️ Muster lösen: Ritual starten</button>
+            <button class="btn btn-ghost" id="addSpiritualBtn">✨ Spirituelle Reise festhalten</button>
+            <button class="btn btn-primary" id="addWinBtn">+ Erfolg / Meilenstein festhalten</button>
+          </div>
         </div>
         <div style="height:16px;"></div>
         <div class="journal-toolbar">
@@ -2635,6 +2660,8 @@ function renderJournal(root){
     root.querySelector('#journalSearch').addEventListener('input', (e)=>{ query=e.target.value; draw(); });
     root.querySelector('#favFilterBtn').addEventListener('click', ()=>{ filterFav=!filterFav; draw(); });
     root.querySelector('#addWinBtn').addEventListener('click', ()=> openWinMilestoneModal(draw));
+    root.querySelector('#addSpiritualBtn').addEventListener('click', ()=> openSpiritualModal(draw));
+    root.querySelector('#openRitualBtn').addEventListener('click', ()=> openReleaseRitual());
     root.querySelectorAll('[data-typefilter]').forEach(c=> c.addEventListener('click', ()=>{ filterType=c.getAttribute('data-typefilter'); draw(); }));
     root.querySelectorAll('[data-star]').forEach(b=> b.addEventListener('click', async ()=>{
       const id = b.getAttribute('data-star');
@@ -2645,6 +2672,7 @@ function renderJournal(root){
     root.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', async ()=>{
       if(confirm('Diesen Eintrag wirklich löschen?')){ await deleteJournalEntry(b.getAttribute('data-del')); draw(); }
     }));
+    root.querySelectorAll('[data-discuss]').forEach(b=> b.addEventListener('click', ()=> startSpiritualDiscussion(b.getAttribute('data-discuss'))));
   }
   draw();
 }
@@ -2716,8 +2744,121 @@ function openWinMilestoneModal(onSaved){
   draw();
   document.body.appendChild(div);
 }
+
+const RELEASE_RITUAL_STEPS = [
+  'Setz dich bequem hin, oder leg dich hin, wenn dir das lieber ist. Schließe die Augen, wenn es sich gut anfühlt. Atme ein paar Mal ruhig ein und aus, ohne den Atem zu verändern.',
+  'Stell dir das, was du loslassen möchtest, als ein Band oder eine Verbindung vor — eine Verbindung von dir zu diesem Muster, dieser Vergangenheit, dieser Person oder Situation.',
+  'Schau dir dieses Band einen Moment an, ohne es zu bewerten. Es war lange ein Teil von dir, vielleicht hat es dich sogar einmal geschützt oder etwas Wichtiges gehalten.',
+  'Bedanke dich innerlich dafür, was es dir einmal gegeben oder gelehrt hat — auch wenn es schwer war oder dir wehgetan hat. Dank und Loslassen schließen sich nicht aus.',
+  'Wenn du bereit bist, stell dir vor, wie sich dieses Band sanft löst — durchtrennt, auflöst oder einfach loslässt, ganz in deinem eigenen Tempo. Es gibt kein Zuschnell und kein Zulangsam.',
+  'Spüre nach, was jetzt an dieser Stelle Platz hat. Das muss nichts Großes sein — auch Stille, Leere oder ein leichtes Gefühl im Körper ist genau richtig.',
+  'Wenn du magst, leg eine Hand aufs Herz und sag innerlich zu dir: Ich lasse los, was nicht mehr zu mir gehört. Ich bin bereit für das Neue.',
+  'Komm langsam zurück in den Raum um dich herum. Beweg vorsichtig Finger und Zehen, und öffne die Augen, wenn du bereit bist.',
+];
+function openReleaseRitual(){
+  let step = -1; // -1 = intro/input step
+  let releaseTarget = '';
+  const div = document.createElement('div'); div.className='overlay';
+  function draw(){
+    if(step===-1){
+      div.innerHTML = `
+        <div class="modal scrim-fade" style="text-align:center;">
+          <h2 style="margin-top:0;">🕊️ Alte Verbindungen & Muster lösen</h2>
+          <p style="font-size:13px;color:var(--text-soft);line-height:1.7;">Eine geführte, symbolische Übung zum bewussten Loslassen. Was sie dir bedeutet, entscheidest du selbst — dein Begleiter behauptet nicht, dass sie energetisch etwas durchtrennt, aber die Übung selbst ist echt, wenn du dich darauf einlässt.</p>
+          <label class="field-label" style="text-align:left;">Was möchtest du heute loslassen? (ein Muster, eine Verbindung, eine alte Verabredung mit der Vergangenheit)</label>
+          <div class="field-with-mic"><textarea class="big" id="releaseTargetInput" style="min-height:80px;" placeholder="z.B. Die alte Verbindung zu ..."></textarea>${micButtonHtml('releaseTargetMic')}</div>
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:center;">
+            <button class="btn btn-primary" id="startRitualBtn">Ritual beginnen</button>
+            <button class="btn btn-ghost" id="closeRitualBtn">Abbrechen</button>
+          </div>
+        </div>`;
+      div.querySelector('#closeRitualBtn').addEventListener('click', ()=> div.remove());
+      wireVoiceButton(div.querySelector('#releaseTargetMic'), div.querySelector('#releaseTargetInput'));
+      div.querySelector('#startRitualBtn').addEventListener('click', ()=>{
+        releaseTarget = div.querySelector('#releaseTargetInput').value.trim();
+        step = 0; draw();
+      });
+      return;
+    }
+    if(step >= RELEASE_RITUAL_STEPS.length){
+      div.innerHTML = `
+        <div class="modal scrim-fade" style="text-align:center;">
+          <h2 style="margin-top:0;">🕊️ Losgelassen</h2>
+          <p style="font-size:14px;color:var(--text-soft);line-height:1.7;">Schön, dass du dir diese Zeit genommen hast. Egal wie es sich gerade anfühlt — du hast einen bewussten Schritt gemacht.</p>
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:center;">
+            <button class="btn btn-primary" id="finishRitualBtn">Festhalten & beenden</button>
+          </div>
+        </div>`;
+      div.querySelector('#finishRitualBtn').addEventListener('click', async ()=>{
+        await saveJournalEntry({
+          id:uid(), date:nowISO(), type:'spiritual', favorite:false,
+          title:'🕊️ Ritual: Loslassen', content: releaseTarget ? `Losgelassen: ${releaseTarget}` : 'Ritual zum Lösen alter Muster & Verbindungen durchgeführt.',
+        });
+        toast('Festgehalten.');
+        div.remove();
+      });
+      return;
+    }
+    div.innerHTML = `
+      <div class="modal scrim-fade" style="text-align:center;">
+        <div class="ring-wrap" style="margin:6px auto 18px;">${growthRingSvg(70,3)}</div>
+        <p style="font-size:15px;line-height:1.8;min-height:100px;">${RELEASE_RITUAL_STEPS[step]}</p>
+        <p style="font-size:12px;color:var(--text-faint);">Schritt ${step+1} von ${RELEASE_RITUAL_STEPS.length}</p>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+          ${step>0 ? `<button class="btn btn-ghost" id="prevRitualBtn">Zurück</button>` : ''}
+          <button class="btn btn-primary" id="nextRitualBtn">${step===RELEASE_RITUAL_STEPS.length-1?'Fertig':'Weiter'}</button>
+          <button class="btn btn-ghost" id="closeRitualBtn2">Beenden</button>
+        </div>
+      </div>`;
+    div.querySelector('#nextRitualBtn').addEventListener('click', ()=>{ step++; draw(); });
+    div.querySelector('#prevRitualBtn')?.addEventListener('click', ()=>{ step--; draw(); });
+    div.querySelector('#closeRitualBtn2').addEventListener('click', ()=> div.remove());
+  }
+  draw();
+  document.body.appendChild(div);
+}
+
+const SPIRITUAL_TEMPLATES = [
+  'Ein Ahnenmuster, das mir aufgefallen ist',
+  'Eine Erkenntnis aus der Kundalini-Ausbildung',
+  'Eine Engelzahl-Botschaft',
+  'Ein Manifestations-Gedanke',
+  'Ein universelles Gesetz, das mich beschäftigt',
+];
+function openSpiritualModal(onSaved){
+  const div = document.createElement('div'); div.className='overlay';
+  div.innerHTML = `
+    <div class="modal scrim-fade">
+      <h2 style="margin-top:0;">✨ Meine spirituelle Reise</h2>
+      <p style="font-size:12.5px;color:var(--text-soft);">Dein persönlicher Notizraum für Ahnenarbeit, Kundalini, Engelzahlen, universelle Gesetze und alles, was dich auf diesem Weg beschäftigt. Wird nur festgehalten, nicht bewertet oder eingeordnet.</p>
+      <div style="margin-bottom:12px;">${SPIRITUAL_TEMPLATES.map(t=>`<span class="chip" data-template="${escapeHtml(t)}">${t}</span>`).join('')}</div>
+      <label class="field-label">Deine Notiz</label>
+      <div class="field-with-mic"><textarea class="big" id="spiritualText" style="min-height:120px;" placeholder="Was möchtest du festhalten?"></textarea>${micButtonHtml('spiritualMicBtn')}<button type="button" class="mic-btn" id="spiritualFixBtn" title="Rechtschreibung korrigieren">✏️</button></div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button class="btn btn-primary" id="saveSpiritualBtn">Speichern</button>
+        <button class="btn btn-ghost" id="closeSpiritualBtn">Abbrechen</button>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+  div.querySelector('#closeSpiritualBtn').addEventListener('click', ()=> div.remove());
+  div.querySelectorAll('[data-template]').forEach(c=> c.addEventListener('click', ()=>{
+    div.querySelector('#spiritualText').value = c.getAttribute('data-template') + ': ';
+    div.querySelector('#spiritualText').focus();
+  }));
+  wireVoiceButton(div.querySelector('#spiritualMicBtn'), div.querySelector('#spiritualText'));
+  wireSpellingFixButton(div.querySelector('#spiritualFixBtn'), div.querySelector('#spiritualText'));
+  div.querySelector('#saveSpiritualBtn').addEventListener('click', async ()=>{
+    const text = div.querySelector('#spiritualText').value.trim();
+    if(!text){ toast('Schreib kurz, was du festhalten möchtest.'); return; }
+    await saveJournalEntry({id:uid(), date:nowISO(), type:'spiritual', favorite:false, title:'✨ Spirituelle Reise', content:text});
+    toast('Festgehalten.');
+    div.remove();
+    if(onSaved) onSaved();
+  });
+}
+
 function tagLabel(type){
-  return {summary:'Zusammenfassung', feeling:'Gefühl', exercise:'Übung', win:'Kleiner Erfolg', milestone:'Meilenstein 🌱', detail:'Über dich'}[type] || 'Eintrag';
+  return {summary:'Zusammenfassung', feeling:'Gefühl', exercise:'Übung', win:'Kleiner Erfolg', milestone:'Meilenstein 🌱', detail:'Über dich', spiritual:'Spirituelle Reise ✨'}[type] || 'Eintrag';
 }
 function entryCardHtml(j){
   return `
@@ -2735,6 +2876,7 @@ function entryCardHtml(j){
       <div style="font-weight:600;margin-bottom:4px;">${escapeHtml(j.title)}</div>
       <div style="font-size:13.8px;color:var(--text-soft);line-height:1.6;white-space:pre-wrap;">${escapeHtml(j.content)}</div>
       ${j.image ? `<img src="${j.image}" style="max-width:220px;max-height:160px;border-radius:var(--radius-sm);margin-top:10px;display:block;">` : ''}
+      ${j.type==='spiritual' ? `<button class="btn btn-ghost" data-discuss="${j.id}" style="margin-top:10px;font-size:11.5px;padding:5px 12px;">Mit Begleiter besprechen</button>` : ''}
     </div>`;
 }
 
