@@ -46,12 +46,12 @@
   ::selection{ background:var(--sage-light); }
   a{ color:var(--sage-dark); }
 
-  #app{ display:flex; min-height:100vh; }
+  #app{ display:flex; min-height:100vh; min-height:100dvh; }
 
   /* ---------- Sidebar ---------- */
   .sidebar{
     width:238px; flex-shrink:0; background:var(--bg-soft); border-right:1px solid var(--border);
-    display:flex; flex-direction:column; padding:24px 16px; gap:6px; position:sticky; top:0; height:100vh;
+    display:flex; flex-direction:column; padding:24px 16px; gap:6px; position:sticky; top:0; height:100vh; height:100dvh;
   }
   .brand{ display:flex; align-items:center; gap:10px; padding:6px 10px 22px; }
   .brand-mark{ width:34px; height:34px; flex-shrink:0; }
@@ -118,7 +118,7 @@
   @media (max-width:860px){ .home-grid{ grid-template-columns:1fr; } }
 
   /* ---------- Chat ---------- */
-  .chat-shell{ display:flex; flex-direction:column; height:calc(100vh - 40px); }
+  .chat-shell{ display:flex; flex-direction:column; height:calc(100vh - 40px); height:calc(100dvh - 40px); }
   .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:20px 4px 14px; border-bottom:1px solid var(--border); }
   .chat-scroll{ flex:1; overflow-y:auto; padding:22px 4px; display:flex; flex-direction:column; gap:16px; }
   .msg{ max-width:74%; padding:14px 17px; border-radius:20px; font-size:14.8px; line-height:1.62; white-space:pre-wrap; }
@@ -215,7 +215,7 @@
     .mobile-tabbar button{ background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10.5px; color:var(--text-faint); padding:4px 8px; }
     .mobile-tabbar button.active{ color:var(--forest); }
     .mobile-tabbar svg{ width:20px; height:20px; }
-    .chat-shell{ height:calc(100vh - 130px); }
+    .chat-shell{ height:calc(100vh - 130px); height:calc(100dvh - 130px); }
   }
 
   @media print{
@@ -1718,6 +1718,36 @@ function openGoalModal(){
 }
 
 /* ============================= CHAT ============================= */
+function openSessionHistory(root){
+  const sessions = State.sessions.filter(s=> s.messages.some(m=>m.role==='user'))
+    .slice().sort((a,b)=> new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt));
+  const div = document.createElement('div'); div.className='overlay';
+  div.innerHTML = `
+    <div class="modal scrim-fade">
+      <h2 style="margin-top:0;">Frühere Gespräche</h2>
+      ${sessions.length ? sessions.map(s=>{
+        const firstUserMsg = s.messages.find(m=>m.role==='user');
+        const preview = s.summary?.seenInYou || firstUserMsg?.content || '';
+        return `<div class="entry" style="cursor:pointer;" data-opensession="${s.id}">
+          <div class="entry-head">
+            <span class="entry-date">${fmtDate(s.updatedAt||s.createdAt)}</span>
+            ${s.summary ? `<span class="entry-tag">Abgeschlossen</span>` : ''}
+          </div>
+          <div style="font-size:13.5px;color:var(--text-soft);line-height:1.5;">${escapeHtml(preview.slice(0,140))}${preview.length>140?'…':''}</div>
+        </div>`;
+      }).join('') : `<p style="color:var(--text-faint);font-size:14px;">Noch keine früheren Gespräche mit Inhalt.</p>`}
+      <button class="btn btn-ghost" id="closeHistoryBtn" style="margin-top:14px;">Schließen</button>
+    </div>`;
+  document.body.appendChild(div);
+  div.querySelector('#closeHistoryBtn').addEventListener('click', ()=> div.remove());
+  div.querySelectorAll('[data-opensession]').forEach(el=> el.addEventListener('click', ()=>{
+    State.currentSessionId = el.getAttribute('data-opensession');
+    State.crisisActive = false;
+    div.remove();
+    renderChat(root);
+  }));
+}
+
 function ensureSession(){
   if(State.currentSessionId && State.sessions.find(s=>s.id===State.currentSessionId)) return;
   const last = State.sessions[0];
@@ -1749,7 +1779,8 @@ function renderChat(root){
             ${growthRingSvg(30, Math.min(Math.ceil(sess.messages.length/2),6))}
             <div><div style="font-weight:600;">Dein Begleiter</div><div style="font-size:11.5px;color:var(--text-faint);">${fmtDate(sess.createdAt)}</div></div>
           </div>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" id="historyBtn" style="padding:8px 14px;font-size:12.5px;">Verlauf</button>
             <button class="btn btn-ghost" id="newSessionBtn" style="padding:8px 14px;font-size:12.5px;">Neue Sitzung</button>
             <button class="btn btn-primary" id="endSessionBtn" style="padding:8px 14px;font-size:12.5px;">Sitzung abschließen</button>
           </div>
@@ -1771,6 +1802,7 @@ function renderChat(root){
     State.currentSessionId = null; State.crisisActive = false; renderChat(root);
   });
   root.querySelector('#endSessionBtn').addEventListener('click', endSession);
+  root.querySelector('#historyBtn').addEventListener('click', ()=> openSessionHistory(root));
   root.querySelector('#apiKeyBanner')?.addEventListener('click', ()=> goView('settings'));
 
   const input = root.querySelector('#chatInput');
@@ -3321,7 +3353,7 @@ function renderSettings(root){
 
 /* ============================= INIT ============================= */
 async function init(){
-  document.getElementById('app').innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:var(--text-soft);font-family:var(--font-body);">Lädt ...</div>`;
+  document.getElementById('app').innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;height:100dvh;color:var(--text-soft);font-family:var(--font-body);">Lädt ...</div>`;
   await loadAll();
   render();
 }
