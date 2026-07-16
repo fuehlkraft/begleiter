@@ -1463,7 +1463,7 @@ function openMorningCheckin(){
       <label class="field-label">Was könnte dich heute davon abhalten, sichtbar zu werden?</label>
       <div class="field-with-mic"><textarea id="mHoldBack" class="big" style="min-height:70px;">${escapeHtml(m.couldHoldBack)}</textarea>${micButtonHtml('mHoldBackMic')}</div>
       <label class="field-label">Dein Tagesfokus — die eine wichtigste Sache heute</label>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <input type="text" id="mFocus" value="${escapeHtml(dc.focus||'')}" placeholder="Nicht zehn Aufgaben. Eine." style="flex:1;padding:11px 15px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
         <button class="btn btn-ghost" id="suggestFocusBtn" style="flex-shrink:0;">KI-Vorschlag</button>
       </div>
@@ -3253,7 +3253,7 @@ function renderSettings(root){
           Der Schlüssel wird ausschließlich lokal in deinem Browser gespeichert und nur für Anfragen an Anthropic verwendet — niemals an Dritte weitergegeben.
         </p>
         <label class="field-label">API-Key</label>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <input type="password" id="apiKeyInput" placeholder="sk-ant-..." value="${escapeHtml(State.apiKey||'')}" style="flex:1;padding:11px 15px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
           <button class="btn btn-ghost" id="toggleKeyBtn" type="button" style="flex-shrink:0;">Anzeigen</button>
           <button class="btn btn-primary" id="saveKeyBtn" style="flex-shrink:0;">Speichern</button>
@@ -3266,7 +3266,7 @@ function renderSettings(root){
       <div class="card" style="margin-bottom:20px;">
         <h3 style="margin-top:0;">Wie soll dein Begleiter dich nennen?</h3>
         <p style="font-size:12.5px;color:var(--text-soft);margin-top:0;">Ein Name oder Spitzname — dein Begleiter spricht dich damit hin und wieder an, wie eine gute Freundin es tun würde.</p>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <input type="text" id="userNameInput" value="${escapeHtml(State.userName||'')}" placeholder="z.B. Mia" style="flex:1;padding:11px 15px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
           <button class="btn btn-primary" id="saveNameBtn" style="flex-shrink:0;">Speichern</button>
         </div>
@@ -3304,7 +3304,7 @@ function renderSettings(root){
           <button class="btn btn-primary" id="exportDataBtn">Daten exportieren</button>
           <button class="btn btn-ghost" id="shareDataBtn">📤 Teilen (z.B. Google Drive)</button>
           <button class="btn btn-ghost" id="importDataBtn">Daten importieren</button>
-          <input type="file" id="importDataFile" accept="application/json" style="display:none;">
+          <input type="file" id="importDataFile" accept="application/json,.json,.txt,text/plain" style="display:none;">
         </div>
         <p style="font-size:11.5px;color:var(--text-faint);margin-top:10px;">Beim Importieren werden vorhandene Einträge mit gleicher ID überschrieben, alles andere bleibt erhalten — nichts wird automatisch gelöscht. „Teilen" öffnet den Teilen-Dialog deines Handys — dort kannst du Google Drive (oder jede andere App) als Ziel wählen, dann rufst du die Datei von dort auf jedem Gerät wieder ab.</p>
       </div>
@@ -3315,7 +3315,7 @@ function renderSettings(root){
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
           ${(State.noGoWords||[]).map((w,i)=>`<span class="chip">${escapeHtml(w)} <span data-rmnogo="${i}" style="cursor:pointer;color:var(--danger);margin-left:4px;">✕</span></span>`).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">Noch keine eingetragen.</span>'}
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <input type="text" id="noGoInput" placeholder="Wort oder Formulierung ..." style="flex:1;padding:11px 15px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
           <button class="btn btn-primary" id="addNoGoBtn" style="flex-shrink:0;">+</button>
         </div>
@@ -3358,20 +3358,22 @@ function renderSettings(root){
     }catch(err){ toast('Export fehlgeschlagen (' + err.message + ').'); }
   });
   root.querySelector('#shareDataBtn').addEventListener('click', async ()=>{
+    const backup = await exportAllData();
+    const dateStr = new Date().toISOString().slice(0,10);
+    const jsonText = JSON.stringify(backup, null, 2);
+    const txtFilename = 'fuehlkraft-backup-'+dateStr+'.txt';
+    const txtFile = new File([jsonText], txtFilename, {type:'text/plain'});
     try{
-      const backup = await exportAllData();
-      const dateStr = new Date().toISOString().slice(0,10);
-      const filename = 'fuehlkraft-backup-'+dateStr+'.json';
-      const file = new File([JSON.stringify(backup, null, 2)], filename, {type:'application/json'});
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        await navigator.share({files:[file], title:'Fühlkraft Backup', text:'Mein Fühlkraft-Backup vom '+dateStr});
-      } else {
-        toast('Teilen wird hier nicht unterstützt — lade die Datei stattdessen herunter und lade sie manuell in Google Drive hoch.');
-        downloadJson(backup, filename);
+      if(navigator.canShare && navigator.canShare({files:[txtFile]})){
+        await navigator.share({files:[txtFile], title:'Fühlkraft Backup', text:'Mein Fühlkraft-Backup vom '+dateStr});
+        return;
       }
     }catch(err){
-      if(err.name !== 'AbortError') toast('Teilen fehlgeschlagen (' + err.message + ').');
+      if(err.name === 'AbortError') return; // user cancelled the share sheet, not an error
     }
+    // Fallback: guaranteed to work everywhere — direct download, manual upload to Drive
+    toast('Teilen wird von deinem Browser leider nicht unterstützt. Datei wird stattdessen heruntergeladen — lade sie danach manuell in der Google-Drive-App hoch (+ → Hochladen).');
+    downloadJson(backup, 'fuehlkraft-backup-'+dateStr+'.json');
   });
   root.querySelector('#importDataBtn').addEventListener('click', ()=>{
     root.querySelector('#importDataFile').click();
