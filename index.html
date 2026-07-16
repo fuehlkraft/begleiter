@@ -215,7 +215,15 @@
     .mobile-tabbar button{ background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10.5px; color:var(--text-faint); padding:4px 8px; }
     .mobile-tabbar button.active{ color:var(--forest); }
     .mobile-tabbar svg{ width:20px; height:20px; }
-    .chat-shell{ height:calc(100vh - 130px); height:calc(100dvh - 130px); }
+    .chat-shell{ height:auto; }
+    .chat-scroll{ padding-bottom:14px; }
+    .chat-input-bar{
+      position:fixed; left:0; right:0;
+      bottom:calc(58px + env(safe-area-inset-bottom));
+      background:var(--bg); padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+      z-index:15; border-top:1px solid var(--border);
+    }
+    .view.narrow{ padding-bottom:150px; }
   }
 
   @media print{
@@ -1829,6 +1837,7 @@ function renderMessages(){
     scroll.innerHTML += `<div class="typing"><span></span><span></span><span></span></div>`;
   }
   scroll.scrollTop = scroll.scrollHeight;
+  window.scrollTo(0, document.body.scrollHeight);
 }
 
 function renderCrisisInline(){
