@@ -287,6 +287,8 @@ const State = {
   ideas:[],
   scripts:[],
   storyPlans:[],
+  brollCats:[],
+  shotLists:[],
   coachMode:'reflect',
   simpleMode:false,
   noGoWords:[],
@@ -389,6 +391,23 @@ async function loadAll(){
   storyPlans.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
   State.storyPlans = storyPlans;
 
+  const brKeys = await sList('broll:');
+  let brollCats = (await Promise.all(brKeys.map(k=>sGet(k)))).filter(Boolean);
+  if(brollCats.length===0){
+    const defaults = ['Kalender-Nahaufnahmen','Pferde im Alltag','Arbeit/Schreibtisch','Familie','Naturmomente','Gesichter/Reaktionen'];
+    for(const name of defaults){
+      const cat = {id:uid(), name, count:0, lastFilmed:null, notes:''};
+      await sSet('broll:'+cat.id, cat);
+      brollCats.push(cat);
+    }
+  }
+  State.brollCats = brollCats;
+
+  const slKeys = await sList('shotlist:');
+  const shotLists = (await Promise.all(slKeys.map(k=>sGet(k)))).filter(Boolean);
+  shotLists.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  State.shotLists = shotLists;
+
   State.loaded = true;
 }
 async function saveTodayCheckin(){
@@ -431,9 +450,27 @@ async function deleteStoryPlan(id){
   await sDelete('storyplan:'+id);
   State.storyPlans = State.storyPlans.filter(p=>p.id!==id);
 }
+async function saveBrollCat(cat){
+  await sSet('broll:'+cat.id, cat);
+  const idx = State.brollCats.findIndex(c=>c.id===cat.id);
+  if(idx>=0) State.brollCats[idx]=cat; else State.brollCats.push(cat);
+}
+async function deleteBrollCat(id){
+  await sDelete('broll:'+id);
+  State.brollCats = State.brollCats.filter(c=>c.id!==id);
+}
+async function saveShotList(list){
+  await sSet('shotlist:'+list.id, list);
+  const idx = State.shotLists.findIndex(l=>l.id===list.id);
+  if(idx>=0) State.shotLists[idx]=list; else State.shotLists.unshift(list);
+}
+async function deleteShotList(id){
+  await sDelete('shotlist:'+id);
+  State.shotLists = State.shotLists.filter(l=>l.id!==id);
+}
 
 async function exportAllData(){
-  const prefixes = ['session:','journal:','goal:','idea:','script:','storyplan:','daily:'];
+  const prefixes = ['session:','journal:','goal:','idea:','script:','storyplan:','daily:','broll:','shotlist:'];
   const data = {};
   for(const p of prefixes){
     const keys = await sList(p);
@@ -845,6 +882,22 @@ const CALENDAR_IDEA_TEMPLATES = [
   'Das Ich-weiß-es-nicht-Gefühl und wie es mich entlastet hat',
 ];
 
+function shotListSystemPrompt(productInfo, categories){
+  const productBlock = productInfo && productInfo.trim() ? `\n\nPRODUKTWISSEN:\n${productInfo.trim()}\n` : '';
+  const catList = categories && categories.length ? categories.map(c=>c.name).join(', ') : 'Kalender-Nahaufnahmen, Pferde im Alltag, Arbeit/Schreibtisch, Familie, Naturmomente, Gesichter/Reaktionen';
+  return `Du erstellst eine konkrete Drehliste für eine einzelne Filmsession (B-Roll, kurze stumme Clips ohne Sprache, 5-10 Sekunden je Clip), die später in Reels als Bildmaterial zu gesprochenen Sätzen passend eingeschnitten werden.${productBlock}
+
+Die Person hat folgende B-Roll-Kategorien: ${catList}. Verteile die Clips über mehrere dieser Kategorien.
+
+Erstelle GENAU 8 konkrete, sofort umsetzbare Clip-Ideen für die nächste Session am Stall/zuhause. Jede Idee ist eine kurze, bildhafte Anweisung, WAS genau gefilmt wird (Handbewegung, Blickwinkel, Motiv) — konkret genug, dass man sofort weiß, was zu tun ist, ohne nachzudenken. Keine Ideen, die Sprache/Reden erfordern — reines Bildmaterial.
+
+Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt, ohne Einleitung, ohne Markdown, ohne Rückfrage:
+{"clips":[{"category":"passende Kategorie aus der Liste oben","idea":"konkrete Bildidee"}, ... insgesamt genau 8]}
+Auf Deutsch.
+
+${noGoInstructionText()}`;
+}
+
 function storyPlanSystemPrompt(productInfo){
   const productBlock = productInfo && productInfo.trim() ? `\n\nPRODUKTWISSEN:\n${productInfo.trim()}\n` : '';
   return `Du erstellst einen 7-Tage-Plan für Instagram-Storys für jemanden, der nicht jeden Tag ein Reel postet, aber trotzdem seine Wunschkundin durch die Woche mitnehmen möchte. Die Person lernt dieses Format gerade erst und braucht ein echtes Gefühl dafür, was konkret zu tun ist — keine abstrakten Stichworte.${productBlock}
@@ -853,7 +906,7 @@ GRUNDREGEL: Von 7 Tagen ist GENAU EIN Tag ein klarer Verkaufstag (setze "salesDa
 
 Jeder Tag hat GENAU 3 Story-Beats (Aufhänger, Inhalt, Interaktion) — außer der Verkaufstag, dort ersetzt ein klarer, direkter Call-to-Action (Link-Sticker) den dritten Beat. Jeder Beat hat ZWEI Teile:
 - "idea": eine ausführlichere Beschreibung (2-3 Sätze), WAS genau gezeigt/gefilmt wird und WARUM das an diesem Punkt der Woche funktioniert — konkret genug, dass die Person sofort ein Bild vor Augen hat, nicht nur ein Stichwort.
-- "text": ein konkreter Beispieltext zum direkten Verwenden — der gesprochene Satz, die Sticker-Frage im genauen Wortlaut, oder der Caption-Text, den man eins zu eins übernehmen oder leicht anpassen kann.
+- "text": ein konkreter Beispieltext zum direkten Verwenden — warm formuliert, nicht abgehackt, mit Fokus auf dem Erleben der Zuschauerin (ihr "kennst du das auch") statt nur auf dem, was die Erzählerin getan hat. Der gesprochene Satz, die Sticker-Frage im genauen Wortlaut, oder der Caption-Text, den man eins zu eins übernehmen oder leicht anpassen kann.
 
 SEHR WICHTIG FÜR GÜLTIGES JSON: Verwende in keinem Textwert doppelte Anführungszeichen ("). Wenn du wörtliche Sätze oder Sticker-Texte zitieren willst, nutze stattdessen einfache Anführungszeichen (') oder gar keine. Keine Zeilenumbrüche innerhalb eines Textwerts.
 
@@ -867,9 +920,56 @@ ${noGoInstructionText()}`;
 function ideaGeneratorSystemPrompt(productInfo){
   const productBlock = productInfo && productInfo.trim() ? `\n\nPRODUKTWISSEN:\n${productInfo.trim()}\n` : '';
   return `Du hilfst dabei, frische, konkrete Ideen für kurze Instagram-Reels zu finden, passend zum Produkt und zur Zielgruppe unten.${productBlock}
-Die Ideen sollen aus echten, alltäglichen Situationen kommen, nicht aus generischen Marketing-Floskeln. Bevorzuge Ideen mit einem lustigen, neugierig machenden Twist — kleine Alltagsanekdoten, die harmlos oder banal beginnen und dann eine überraschende, witzige oder herzerwärmende Wendung nehmen (z.B. ein Missverständnis, ein Kind oder Tier sagt/tut etwas Unerwartetes, eine Situation kippt völlig anders als gedacht). Denk an Geschichten, die man beim Kaffee mit einer Freundin erzählen würde, weil sie einfach gut sind, nicht weil sie ein Produkt bewerben. Kurz und konkret formuliert (max. 12 Wörter pro Idee), und deutlich voneinander unterscheidbar. Wenn dir bereits vorhandene Ideen/Themen als Kontext mitgegeben werden, vermeide inhaltliche Wiederholungen dazu.
+Die Ideen sollen aus echten, alltäglichen Situationen kommen, nicht aus generischen Marketing-Floskeln. Bevorzuge Ideen mit einem lustigen, neugierig machenden Twist — kleine Alltagsanekdoten, die harmlos oder banal beginnen und dann eine überraschende, witzige oder herzerwärmende Wendung nehmen (z.B. ein Missverständnis, ein Kind oder Tier sagt/tut etwas Unerwartetes, eine Situation kippt völlig anders als gedacht). Achte darauf, dass die Ideen einen echten Anknüpfungspunkt zum Schmerz/Alltag der Zielgruppe haben (das "kennst du das auch"-Gefühl), nicht nur zur eigenen Geschichte der Erzählerin. Denk an Geschichten, die man beim Kaffee mit einer Freundin erzählen würde, weil sie einfach gut sind, nicht weil sie ein Produkt bewerben. Kurz und konkret formuliert (max. 12 Wörter pro Idee), und deutlich voneinander unterscheidbar. Wenn dir bereits vorhandene Ideen/Themen als Kontext mitgegeben werden, vermeide inhaltliche Wiederholungen dazu.
 Antworte AUSSCHLIESSLICH mit einem JSON-Array aus genau 6 kurzen Ideen als Strings, ohne Einleitung, ohne Markdown, ohne Rückfrage:
 ["Idee 1", "Idee 2", "Idee 3", "Idee 4", "Idee 5", "Idee 6"]
+Auf Deutsch.
+
+${noGoInstructionText()}`;
+}
+
+function introSystemPrompt(productInfo, extraFacts){
+  const productBlock = productInfo && productInfo.trim() ? `\n\nPRODUKTWISSEN:\n${productInfo.trim()}\n` : '';
+  const extraBlock = extraFacts && extraFacts.trim() ? `\n\nDAS SOLL AUF JEDEN FALL VORKOMMEN: ${extraFacts.trim()}\n` : '';
+  return `Du schreibst ein "Wer bin ich"-Intro-Reel — das erste, was ein neuer Besucher sehen soll, der zum ersten Mal auf dem Profil landet. Es soll dauerhaft gültig sein (nicht an ein bestimmtes Datum gebunden) und im Profil angeheftet bzw. als Highlight-Cover verwendet werden.${productBlock}${extraBlock}
+
+ZIEL: In 45-60 Sekunden soll ein völlig Fremder verstehen: Wer bist du, warum machst du das (dein "Warum", deine tiefere Motivation, nicht nur die Fakten), und was bekommt er/sie hier, wenn er/sie bleibt (folgt). Nutze dafür die echte Ursprungsgeschichte aus dem Produktwissen (z.B. wie der Kalender entstanden ist), nicht generische Marketing-Sätze. Baue das Reel so auf, dass Identität ("wer bin ich") UND Motivation ("warum mache ich das") beide spürbar werden — nicht als zwei getrennte Blöcke, sondern ineinander verwoben, mit einem Spannungsbogen (Hook → Loop offen halten → erst gegen Ende auflösen), damit die Zuschauerin nicht gelangweilt abspringt, bevor der Kern kommt.
+
+REGELN:
+- Sprache so einfach, dass ein Kind sie versteht — aber natürlich fließend, wie ein echtes Gespräch, keine Aufzählung.
+- SEHR WICHTIG — HERZLICHKEIT: Schreibe warm, nicht abgehackt oder wie eine Liste von Fakten. Auch wenn es um "wer bin ich" geht, soll der Anfang die Zuschauerin abholen — z.B. worin sie sich wiedererkennen könnte — bevor die eigene Geschichte im Detail folgt.
+- Hook (1-3 Sek.) muss sofort einen Loop öffnen, ohne die Pointe zu verraten.
+- Reduziere auf EINE zentrale Botschaft, wer du bist und was hier zu finden ist — tease sie bis zum Ende. Halte die Spannung über das ganze Video, nicht nur am Anfang (siehe "aber/deshalb" unten).
+- "Aber" und "deshalb" statt "und dann" für Spannung.
+- Ende: eine klare, warme Zusammenfassung, wer du bist und was Follower hier erwarten dürfen.
+- CTA: sehr weich, z.B. "Bleib gerne, falls dich das auch beschäftigt."
+- Stelle NIEMALS eine Rückfrage. Triff sinnvolle Annahmen.
+- Schreibe zusätzlich: eine Caption (endet mit einer echten Frage), 8-15 Hashtags, einen "highlightText" (2-3 kurze, prägnante Sätze für ein "Über mich"-Highlight, Fokus auf Identität — wer bist du), einen separaten "warumText" (2-3 kurze, persönliche Sätze für ein eigenes "Mein Warum"-Highlight — deine tiefere Motivation, warum du das genau so machst) und eine "tagline" (ein einzeiliger, einprägsamer Satz, der auch als Bio-Zeile funktionieren würde).
+
+Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt, ohne Einleitung, ohne Markdown, ohne Rückfrage:
+{"hookVisual":"...","hookSpeak":"...","kontext":"...","twist":"...","aufloesung":"...","ende":"...","cta":"...","caption":"...","hashtags":["..."],"highlightText":"...","warumText":"...","tagline":"..."}
+Auf Deutsch.
+
+${noGoInstructionText()}`;
+}
+
+function carouselSystemPrompt(productInfo){
+  const productBlock = productInfo && productInfo.trim() ? `\n\nPRODUKTWISSEN:\n${productInfo.trim()}\n` : '';
+  return `Du hilfst dabei, einen Instagram-Karussell-Post (5-8 Bild-Slides) zu schreiben, auf Basis einer Story-Idee, die der Nutzer dir gleich gibt.${productBlock}
+
+REGELN:
+- Sprache so einfach, dass ein Kind sie versteht — aber NICHT abgehackt, sondern natürlich fließend, wie echtes Sprechen.
+- SEHR WICHTIG — HERZLICHKEIT UND FOKUS AUF DIE LESERIN: Schreibe warm, nicht wie aneinandergereihte Stichpunkte. Die ersten Slides sollen sich Zeit nehmen, den Schmerzpunkt oder die Erschöpfung der Leserin wirklich einzufangen, so dass sie sich sofort wiedererkennt — der Fokus liegt auf ihrem Erleben, nicht in erster Linie auf dem, was die Erzählerin erreicht oder gebaut hat.
+- Slide 1 ist die Hook — muss beim Durchwischen sofort stoppen, öffnet einen Loop, verrät nichts.
+- Die mittleren Slides bauen Kontext/Wert auf, ein Gedanke pro Slide, kurze Sätze (max. 2-3 Zeilen pro Slide, da wenig Platz auf dem Bild).
+- Der letzte Slide fasst in einem Satz zusammen und lädt sehr weich zur Interaktion ein (z.B. "Speichern, falls du das auch brauchst" oder eine Frage für die Kommentare).
+- WICHTIG: Instagram prüft inzwischen auch bei Karussells auf Originalität — das Ergebnis muss eigene, echte Inhalte sein, keine reinen Zitate oder Screenshots.
+- Bevorzuge einen lustigen, neugierig machenden Ton mit einem echten Twist aus dem Alltag, wenn es zur Geschichte passt.
+- Stelle NIEMALS eine Rückfrage. Interpretiere die Story-Idee so gut wie möglich, auch wenn sie kurz oder unklar ist.
+- Schreibe zusätzlich eine passende Instagram-Caption (3-6 Sätze), die IMMER mit einer echten Frage endet, die zum Kommentieren einlädt. Dazu 8-15 passende Hashtags (Mischung aus nischig und breit, ohne "#"-Zeichen).
+
+Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt, ohne Einleitung, ohne Markdown, ohne Rückfrage:
+{"slides":[{"slideNumber":1,"text":"Text für diesen Slide"}, ... 5 bis 8 Slides insgesamt],"caption":"vollständige Instagram-Caption","hashtags":["hashtag1","hashtag2","..."]}
 Auf Deutsch.
 
 ${noGoInstructionText()}`;
@@ -886,6 +986,7 @@ function scriptSystemPrompt(framework, productInfo){
 
 REGELN:
 - Sprache so einfach, dass ein Kind sie versteht — aber NICHT abgehackt oder kindlich klingend, sondern natürlich fließend gesprochen, wie ein echtes Gespräch. Kurze, klare Sätze, keine Fachbegriffe, keine Schachtelsätze.
+- SEHR WICHTIG — HERZLICHKEIT UND FOKUS AUF DIE ZUSCHAUERIN: Schreibe warm, weich, mit echten Übergängen — nicht wie aneinandergereihte Stichpunkte. Der Kontext-Teil soll sich Zeit nehmen, den Schmerzpunkt, die Erschöpfung oder das Gefühl der Zuschauerin wirklich einzufangen, so dass SIE sich verstanden fühlt, bevor überhaupt von der Lösung die Rede ist. Der Fokus liegt auf dem, was die Zuschauerin fühlt und erlebt (ihr Alltag, ihre Überforderung, ihr "kennst du das auch"), nicht in erster Linie darauf, was die Erzählerin gemacht oder erschaffen hat — die eigene Geschichte ist das Vehikel, um die Zuschauerin zu erreichen, nicht der Mittelpunkt.
 - Bevorzuge einen lustigen, neugierig machenden Erzählton mit einem echten Twist aus dem Alltag — die Geschichte beginnt harmlos oder banal und nimmt dann eine überraschende, witzige oder herzerwärmende Wendung (z.B. eine unerwartete Reaktion, ein Missverständnis, ein Kind oder Tier sagt/tut etwas Überraschendes). So, wie man eine gute Anekdote beim Kaffee erzählen würde, nicht wie eine Werbebotschaft.
 - Die Hook (erste 1-3 Sek.) entscheidet 80% des Erfolgs — sie muss sofort einen Loop öffnen (eine offene Frage oder Spannung im Kopf des Zuschauers), niemals die Pointe verraten.
 - Nutze "aber" und "deshalb" statt "und dann", um Spannung durch das ganze Skript zu halten.
@@ -2365,6 +2466,9 @@ function renderSichtbarkeit(root){
         <button class="btn ${sichtbarkeitTab==='ideen'?'btn-primary':'btn-ghost'}" data-svtab="ideen">💡 Ideen</button>
         <button class="btn ${sichtbarkeitTab==='skripte'?'btn-primary':'btn-ghost'}" data-svtab="skripte">🎬 Skripte</button>
         <button class="btn ${sichtbarkeitTab==='storyplan'?'btn-primary':'btn-ghost'}" data-svtab="storyplan">📅 Story-Plan</button>
+        <button class="btn ${sichtbarkeitTab==='broll'?'btn-primary':'btn-ghost'}" data-svtab="broll">🎞️ B-Roll</button>
+        <button class="btn ${sichtbarkeitTab==='intro'?'btn-primary':'btn-ghost'}" data-svtab="intro">👋 Intro</button>
+        <button class="btn ${sichtbarkeitTab==='ueberblick'?'btn-primary':'btn-ghost'}" data-svtab="ueberblick">📖 Überblick</button>
       </div>
 
       <div id="tabIdeen" style="display:${sichtbarkeitTab==='ideen'?'block':'none'};">
@@ -2389,13 +2493,20 @@ function renderSichtbarkeit(root){
 
       <div id="tabSkripte" style="display:${sichtbarkeitTab==='skripte'?'block':'none'};">
       <h3>Skript-Werkstatt</h3>
-      <p style="font-size:12.5px;color:var(--text-soft);margin-top:0;">Wähle ein Framework, beschreib kurz, worum es geht, und lass dir ein Skript daraus bauen.</p>
+      <p style="font-size:12.5px;color:var(--text-soft);margin-top:0;">Wähle Format und Framework, beschreib kurz, worum es geht, und lass dir ein Skript daraus bauen.</p>
       <div class="card" style="margin-bottom:30px;">
-        <label class="field-label">Framework</label>
+        <label class="field-label">Format</label>
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-          <button class="btn btn-primary" id="fwEineBtn" data-fw="eine" style="flex:1;">1 · Eine Sache</button>
-          <button class="btn btn-ghost" id="fwZweiBtn" data-fw="zwei" style="flex:1;">2 · Zwei Arten</button>
-          <button class="btn btn-ghost" id="fwDreiBtn" data-fw="drei" style="flex:1;">3 · Drei Schritte</button>
+          <button class="btn btn-primary" id="fmtReelBtn" data-fmt="reel" style="flex:1;">🎬 Reel</button>
+          <button class="btn btn-ghost" id="fmtCarouselBtn" data-fmt="carousel" style="flex:1;">🖼️ Karussell</button>
+        </div>
+        <div id="frameworkPicker">
+          <label class="field-label">Framework</label>
+          <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="fwEineBtn" data-fw="eine" style="flex:1;">1 · Eine Sache</button>
+            <button class="btn btn-ghost" id="fwZweiBtn" data-fw="zwei" style="flex:1;">2 · Zwei Arten</button>
+            <button class="btn btn-ghost" id="fwDreiBtn" data-fw="drei" style="flex:1;">3 · Drei Schritte</button>
+          </div>
         </div>
         <label class="field-label">Worum geht's? (die echte Geschichte, in ein paar Sätzen)</label>
         <div class="field-with-mic"><textarea id="scriptTopic" class="big" style="min-height:90px;" placeholder="z.B. Ich hab meiner Tochter den Kalender gezeigt und sie meinte, das ist rattenscharf ..."></textarea>${micButtonHtml('scriptMicBtn')}<button type="button" class="mic-btn" id="scriptFixBtn" title="Rechtschreibung korrigieren">✏️</button></div>
@@ -2427,6 +2538,92 @@ function renderSichtbarkeit(root){
       <div id="storyPlanErrorBox" style="display:none;margin-bottom:14px;padding:12px 15px;background:var(--danger-bg);color:var(--danger);border-radius:var(--radius-sm);font-size:12.5px;line-height:1.6;"></div>
       <div id="storyPlansWrap">${storyPlansListHtml()}</div>
       </div>
+
+      <div id="tabBroll" style="display:${sichtbarkeitTab==='broll'?'block':'none'};">
+      <h3>Deine B-Roll-Bibliothek</h3>
+      <p style="font-size:12.5px;color:var(--text-soft);margin-top:0;">Sortiert nach Bildmotiv, nicht nach Thema — so findest du beim Schneiden schnell passendes Material zu dem, was du gerade erzählst. Die eigentlichen Clips speicherst du wie gewohnt in deiner Handy-Galerie; hier behältst du nur den Überblick.</p>
+      <div id="brollCatsWrap">${brollCatsListHtml()}</div>
+      <button class="btn btn-ghost" id="addBrollCatBtn" style="margin-bottom:30px;">+ Neue Kategorie</button>
+
+      <h3>Dreh-Session-Liste</h3>
+      <p style="font-size:12.5px;color:var(--text-soft);margin-top:0;">Bevor du filmst: eine konkrete Liste mit 8 Clip-Ideen für die nächste Session, verteilt über deine Kategorien — damit du nicht überlegen musst, sondern einfach abdrehst.</p>
+      <div style="margin-bottom:14px;">
+        <button class="btn btn-primary" id="genShotListBtn">🎬 Drehliste erstellen</button>
+        ${!hasApiKey() ? `<span style="font-size:11.5px;color:var(--text-faint);margin-left:8px;">Dafür brauchst du einen API-Key in den Einstellungen.</span>` : ''}
+      </div>
+      <div id="shotListErrorBox" style="display:none;margin-bottom:14px;padding:12px 15px;background:var(--danger-bg);color:var(--danger);border-radius:var(--radius-sm);font-size:12.5px;line-height:1.6;"></div>
+      <div id="shotListsWrap">${shotListsHtml()}</div>
+      </div>
+
+      <div id="tabIntro" style="display:${sichtbarkeitTab==='intro'?'block':'none'};">
+      <h3>Dein Intro-Baustein</h3>
+      <p style="font-size:12.5px;color:var(--text-soft);margin-top:0;">Das erste, was jemand sieht, der neu auf deinem Profil landet: "Wer bin ich, warum mache ich das, was bekommst du hier." Dauerhaft gültig — zum Anheften und fürs "Über mich"-Highlight.</p>
+      <div class="card" style="margin-bottom:30px;">
+        <label class="field-label">Soll etwas Bestimmtes auf jeden Fall vorkommen? (optional)</label>
+        <div class="field-with-mic"><textarea id="introExtra" class="big" style="min-height:70px;" placeholder="z.B. drei Pferde, Zahntechnikerin, die Bo-Geschichte ... — leer lassen, dann nutzt der Begleiter dein Produktwissen"></textarea>${micButtonHtml('introMicBtn')}</div>
+        <button class="btn btn-primary" id="genIntroBtn" style="margin-top:12px;">👋 Intro-Baustein erstellen</button>
+        ${!hasApiKey() ? `<p style="font-size:11.5px;color:var(--text-faint);margin-top:8px;">Dafür brauchst du einen API-Key in den Einstellungen.</p>` : ''}
+        <div id="introErrorBox" style="display:none;margin-top:12px;padding:12px 15px;background:var(--danger-bg);color:var(--danger);border-radius:var(--radius-sm);font-size:12.5px;line-height:1.6;"></div>
+      </div>
+      <div id="introsWrap">${introsListHtml()}</div>
+      </div>
+
+      <div id="tabUeberblick" style="display:${sichtbarkeitTab==='ueberblick'?'block':'none'};">
+      <h3>Instagram-Überblick</h3>
+      <p style="font-size:12.5px;color:var(--text-soft);margin-top:0;">Zum Nachschlagen, wenn du gerade nicht mehr weißt, was was ist.</p>
+
+      <div class="card" style="margin-bottom:20px;overflow-x:auto;">
+        <h4 style="margin-top:0;">Die Formate — und wofür sie da sind</h4>
+        <table style="width:100%;border-collapse:collapse;font-size:12.8px;">
+          <tr style="text-align:left;color:var(--text-faint);border-bottom:1px solid var(--border);">
+            <th style="padding:6px 8px 6px 0;">Format</th><th style="padding:6px 8px;">Wofür gut</th><th style="padding:6px 8px;">Wie oft</th><th style="padding:6px 0;">Fühlkraft-Tool</th>
+          </tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;"><strong>Reel</strong></td><td style="padding:8px;">Reichweite — holt neue Menschen rein</td><td style="padding:8px;">Wenn Energie da ist</td><td style="padding:8px 0;">Skripte (Reel)</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;"><strong>Story</strong></td><td style="padding:8px;">Beziehung — hält Follower bei der Stange</td><td style="padding:8px;">Täglich bis mehrmals/Woche</td><td style="padding:8px 0;">Story-Plan</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;"><strong>Karussell</strong></td><td style="padding:8px;">Tiefe & Speichern</td><td style="padding:8px;">1-2×/Woche</td><td style="padding:8px 0;">Skripte (Karussell)</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;"><strong>Einzelbild-Post</strong></td><td style="padding:8px;">Momentaufnahmen, weniger gewichtet</td><td style="padding:8px;">Optional</td><td style="padding:8px 0;">—</td></tr>
+          <tr><td style="padding:8px 8px 8px 0;"><strong>Live</strong></td><td style="padding:8px;">Sehr enge Bindung, in Echtzeit</td><td style="padding:8px;">Erst später</td><td style="padding:8px 0;">—</td></tr>
+        </table>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;overflow-x:auto;">
+        <h4 style="margin-top:0;">Die Profil-Bausteine</h4>
+        <table style="width:100%;border-collapse:collapse;font-size:12.8px;">
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;width:30%;"><strong>Bio</strong></td><td style="padding:8px 0;">Kurztext unter dem Namen — erster Eindruck in 2 Sekunden</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;"><strong>Name-Feld</strong></td><td style="padding:8px 0;">Zeile unterm Profilbild — hier darf ein Suchbegriff rein</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;"><strong>Profilbild</strong></td><td style="padding:8px 0;">Menschen folgen Gesichtern, nicht Logos</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;"><strong>Link in Bio</strong></td><td style="padding:8px 0;">Der einzige klickbare Link — führt zum Kalender</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;"><strong>Highlights</strong></td><td style="padding:8px 0;">Dein "Zuhause im Zuhause" — dauerhaft sichtbar für neue Besucher</td></tr>
+          <tr><td style="padding:8px 8px 8px 0;"><strong>Kontakt-Button</strong></td><td style="padding:8px 0;">Direkter Kontaktweg ohne DM</td></tr>
+        </table>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h4 style="margin-top:0;">Begriffe, die bei uns aufgetaucht sind</h4>
+        <ul style="margin:0;padding-left:20px;font-size:12.8px;line-height:1.9;">
+          <li><strong>Hook</strong> — erste 1-3 Sekunden, entscheiden über Weiterschauen oder Weiterscrollen</li>
+          <li><strong>Loop</strong> — offene Spannung, die im Kopf hängen bleibt, bis sie aufgelöst wird</li>
+          <li><strong>3-2-1-Framework</strong> — Eine Sache / Zwei Arten / Drei Schritte als Erzählstruktur</li>
+          <li><strong>Aber/Deshalb statt Und-dann</strong> — hält Spannung im Text</li>
+          <li><strong>B-Roll</strong> — stumme Bild-Clips, die zum gesprochenen Text passen</li>
+          <li><strong>Watch Time / Sends / Likes per Reach</strong> — wichtigste Algorithmus-Signale 2026, Sends zählen aktuell besonders stark</li>
+          <li><strong>Originalität</strong> — seit April 2026 auch bei Karussells geprüft, keine reinen Reposts</li>
+          <li><strong>Edits-App</strong> — Instagrams eigene Schnitt-App, aktuell mit zeitlich begrenztem Reichweiten-Bonus</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h4 style="margin-top:0;">Welches Tool für welches Bedürfnis</h4>
+        <table style="width:100%;border-collapse:collapse;font-size:12.8px;">
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;">Eine frische Idee</td><td style="padding:8px 0;">→ Ideen</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;">Ein fertiges Reel-Skript</td><td style="padding:8px 0;">→ Skripte (Reel)</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;">Ein Karussell</td><td style="padding:8px 0;">→ Skripte (Karussell)</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;">Eine Woche Storys</td><td style="padding:8px 0;">→ Story-Plan</td></tr>
+          <tr style="border-bottom:1px dashed var(--border);"><td style="padding:8px 8px 8px 0;">Was filmen beim nächsten Stallbesuch</td><td style="padding:8px 0;">→ B-Roll</td></tr>
+          <tr><td style="padding:8px 8px 8px 0;">"Wer bin ich"/"Mein Warum" fürs Profil</td><td style="padding:8px 0;">→ Intro</td></tr>
+        </table>
+      </div>
+      </div>
     </div>`;
 
   root.querySelectorAll('[data-svtab]').forEach(b=> b.addEventListener('click', ()=>{
@@ -2435,8 +2632,11 @@ function renderSichtbarkeit(root){
   }));
 
   wireStoryPlanActions(root);
+  wireBrollActions(root);
+  wireIntroActions(root);
 
   let selectedFramework = 'eine';
+  let selectedFormat = 'reel';
   function setFramework(fw){
     selectedFramework = fw;
     ['eine','zwei','drei'].forEach(f=>{
@@ -2444,9 +2644,19 @@ function renderSichtbarkeit(root){
       if(btn){ btn.className = 'btn ' + (f===fw?'btn-primary':'btn-ghost'); btn.style.flex='1'; }
     });
   }
+  function setFormat(fmt){
+    selectedFormat = fmt;
+    root.querySelector('#fmtReelBtn').className = 'btn ' + (fmt==='reel'?'btn-primary':'btn-ghost');
+    root.querySelector('#fmtReelBtn').style.flex='1';
+    root.querySelector('#fmtCarouselBtn').className = 'btn ' + (fmt==='carousel'?'btn-primary':'btn-ghost');
+    root.querySelector('#fmtCarouselBtn').style.flex='1';
+    root.querySelector('#frameworkPicker').style.display = fmt==='reel' ? 'block' : 'none';
+  }
   root.querySelector('#fwEineBtn').addEventListener('click', ()=> setFramework('eine'));
   root.querySelector('#fwZweiBtn').addEventListener('click', ()=> setFramework('zwei'));
   root.querySelector('#fwDreiBtn').addEventListener('click', ()=> setFramework('drei'));
+  root.querySelector('#fmtReelBtn').addEventListener('click', ()=> setFormat('reel'));
+  root.querySelector('#fmtCarouselBtn').addEventListener('click', ()=> setFormat('carousel'));
 
   root.querySelector('#addIdeaBtn').addEventListener('click', async ()=>{
     const val = root.querySelector('#ideaInput').value.trim();
@@ -2512,9 +2722,9 @@ function renderSichtbarkeit(root){
     const topic = root.querySelector('#scriptTopic').value.trim();
     const errBox = root.querySelector('#scriptErrorBox');
     errBox.style.display = 'none';
-    if(!topic){ toast('Schreib kurz, worum es in dem Video gehen soll.'); return; }
+    if(!topic){ toast('Schreib kurz, worum es gehen soll.'); return; }
     if(!hasApiKey()){ toast('Bitte hinterlege zuerst in den Einstellungen einen Anthropic API-Key.'); return; }
-    e.target.disabled = true; e.target.textContent = 'Schreibe dein Skript ...';
+    e.target.disabled = true; e.target.textContent = 'Schreibe ...';
     function extractJson(raw){
       let json = raw.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
       try{ return JSON.parse(json); }
@@ -2524,24 +2734,25 @@ function renderSichtbarkeit(root){
         throw new Error('Antwort war kein gültiges JSON: "' + raw.slice(0,180) + '"');
       }
     }
+    const promptFn = selectedFormat==='carousel' ? carouselSystemPrompt(State.productInfo) : scriptSystemPrompt(selectedFramework, State.productInfo);
     try{
       let parsed;
       try{
-        const raw = await callClaude(scriptSystemPrompt(selectedFramework, State.productInfo), [{role:'user', content: topic}], 1000);
+        const raw = await callClaude(promptFn, [{role:'user', content: topic}], 1400);
         parsed = extractJson(raw);
       }catch(firstErr){
         e.target.textContent = 'Versuche es noch einmal ...';
         const retryContent = topic + '\n\n(Wichtig: antworte nur mit dem JSON-Objekt, keine Rückfrage, keine Einleitung.)';
-        const raw2 = await callClaude(scriptSystemPrompt(selectedFramework, State.productInfo), [{role:'user', content: retryContent}], 1000);
+        const raw2 = await callClaude(promptFn, [{role:'user', content: retryContent}], 1400);
         parsed = extractJson(raw2);
       }
-      const script = Object.assign({id:uid(), topic, framework:selectedFramework, createdAt:nowISO(), posted:false, postedDate:null}, sanitizeDeep(parsed));
+      const script = Object.assign({id:uid(), topic, framework:selectedFramework, format:selectedFormat, createdAt:nowISO(), posted:false, postedDate:null}, sanitizeDeep(parsed));
       await saveScript(script);
       root.querySelector('#scriptsWrap').innerHTML = scriptsListHtml();
-      wireScriptActions(root);
-      toast('Skript erstellt.');
+      wireScriptActions(root.querySelector('#scriptsWrap'));
+      toast(selectedFormat==='carousel' ? 'Karussell erstellt.' : 'Skript erstellt.');
     }catch(err){
-      errBox.textContent = 'Skript konnte nicht erstellt werden: ' + err.message;
+      errBox.textContent = 'Konnte nicht erstellt werden: ' + err.message;
       errBox.style.display = 'block';
     }
     e.target.disabled = false; e.target.textContent = 'Skript erstellen';
@@ -2596,23 +2807,30 @@ function scriptsListHtml(){
   const fwLabel = {eine:'Eine Sache', zwei:'Zwei Arten', drei:'Drei Schritte'};
   return State.scripts.map(s=>{
     const hashtagLine = (s.hashtags && s.hashtags.length) ? s.hashtags.map(h=>'#'+h.replace(/^#/,'')).join(' ') : '';
+    const isCarousel = s.format==='carousel';
+    const pillLabel = isCarousel ? '🖼️ Karussell' : ('🎬 Reel · ' + (fwLabel[s.framework]||''));
     return `
     <div class="card" style="margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span class="pill">${fwLabel[s.framework]||''} · ${fmtDateShort(s.createdAt)}</span>
+        <span class="pill">${pillLabel} · ${fmtDateShort(s.createdAt)}</span>
         <div style="display:flex;gap:8px;">
           ${s.posted ? `<span class="pill" style="background:var(--sage);color:#fff;">✓ Gepostet</span>` : `<button class="btn btn-ghost" data-postscript="${s.id}" style="font-size:11.5px;padding:5px 12px;">Als gepostet markieren</button>`}
           <button class="star-btn" data-delscript="${s.id}" title="Löschen">✕</button>
         </div>
       </div>
       <p style="font-size:12.5px;color:var(--text-soft);margin:10px 0 0;">${escapeHtml(s.topic)}</p>
+      ${isCarousel ? (s.slides||[]).map(sl=>`
+        <div style="margin-top:10px;padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-sm);">
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;">Slide ${sl.slideNumber}</div>
+          <div style="font-size:13.8px;line-height:1.6;margin-top:2px;">${escapeHtml(sl.text)}</div>
+        </div>`).join('') : `
       ${scriptFieldBlock('Visual Hook', s.hookVisual)}
       ${scriptFieldBlock('Speak Hook', s.hookSpeak)}
       ${scriptFieldBlock('Kontext', s.kontext)}
       ${scriptFieldBlock('Twist (aber)', s.twist)}
       ${scriptFieldBlock('Auflösung (deshalb)', s.aufloesung)}
       ${scriptFieldBlock('Ende', s.ende)}
-      ${scriptFieldBlock('CTA', s.cta)}
+      ${scriptFieldBlock('CTA', s.cta)}`}
       ${s.caption ? `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">
         <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;">Caption</div>
         <div style="font-size:13.8px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(s.caption)}</div>
@@ -2622,11 +2840,15 @@ function scriptsListHtml(){
     </div>`;
   }).join('');
 }
-function wireScriptActions(root){
-  root.querySelectorAll('[data-delscript]').forEach(b=> b.addEventListener('click', async ()=>{
-    if(confirm('Dieses Skript wirklich löschen?')){ await deleteScript(b.getAttribute('data-delscript')); root.querySelector('#scriptsWrap').innerHTML = scriptsListHtml(); wireScriptActions(root); }
+function refreshScriptWraps(){
+  const sw = document.getElementById('scriptsWrap'); if(sw) sw.innerHTML = scriptsListHtml();
+  const iw = document.getElementById('introsWrap'); if(iw) iw.innerHTML = introsListHtml();
+}
+function wireScriptActions(scope){
+  scope.querySelectorAll('[data-delscript]').forEach(b=> b.addEventListener('click', async ()=>{
+    if(confirm('Dieses Skript wirklich löschen?')){ await deleteScript(b.getAttribute('data-delscript')); refreshScriptWraps(); wireScriptActions(document.getElementById('viewRoot')); }
   }));
-  root.querySelectorAll('[data-postscript]').forEach(b=> b.addEventListener('click', async ()=>{
+  scope.querySelectorAll('[data-postscript]').forEach(b=> b.addEventListener('click', async ()=>{
     const s = State.scripts.find(x=>x.id===b.getAttribute('data-postscript'));
     if(!s) return;
     const wasFirst = State.scripts.filter(x=>x.posted).length===0;
@@ -2639,10 +2861,10 @@ function wireScriptActions(root){
     } else {
       toast('Als gepostet markiert.');
     }
-    root.querySelector('#scriptsWrap').innerHTML = scriptsListHtml();
-    wireScriptActions(root);
+    refreshScriptWraps();
+    wireScriptActions(document.getElementById('viewRoot'));
   }));
-  root.querySelectorAll('[data-copycaption]').forEach(b=> b.addEventListener('click', async ()=>{
+  scope.querySelectorAll('[data-copycaption]').forEach(b=> b.addEventListener('click', async ()=>{
     const s = State.scripts.find(x=>x.id===b.getAttribute('data-copycaption'));
     if(!s) return;
     const hashtagLine = (s.hashtags && s.hashtags.length) ? s.hashtags.map(h=>'#'+h.replace(/^#/,'')).join(' ') : '';
@@ -2746,6 +2968,190 @@ function wireStoryPlanActions(root){
     root.querySelector('#storyPlansWrap').innerHTML = storyPlansListHtml();
     wireStoryPlanActions(root);
   }));
+}
+
+function brollCatsListHtml(){
+  if(!State.brollCats.length) return `<p style="color:var(--text-faint);font-size:13.5px;">Noch keine Kategorien.</p>`;
+  return `<div class="mod-grid" style="margin-bottom:16px;">${State.brollCats.map(c=>`
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <strong style="font-size:13.5px;">${escapeHtml(c.name)}</strong>
+        <button class="star-btn" data-delbroll="${c.id}" title="Löschen">✕</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--text-faint);margin:6px 0 10px;">${c.count} Clips${c.lastFilmed? ' · zuletzt '+fmtDateShort(c.lastFilmed) : ''}</div>
+      <button class="btn btn-ghost" data-incbroll="${c.id}" style="font-size:12px;padding:6px 14px;margin-bottom:10px;">+1 gefilmt</button>
+      <input type="text" data-brollnote="${c.id}" value="${escapeHtml(c.notes||'')}" placeholder="Ordner auf dem Handy, z.B. AllergieBo" style="width:100%;padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:12px;">
+    </div>`).join('')}</div>`;
+}
+function shotListsHtml(){
+  if(!State.shotLists.length) return `<p style="color:var(--text-faint);font-size:13.5px;">Noch keine Drehliste erstellt.</p>`;
+  return State.shotLists.map(l=>`
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span class="pill">${fmtDateShort(l.createdAt)}</span>
+        <button class="star-btn" data-delshotlist="${l.id}" title="Löschen">✕</button>
+      </div>
+      ${l.clips.map((c,i)=>`
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;cursor:pointer;">
+          <input type="checkbox" data-shotdone="${l.id}:${i}" ${c.done?'checked':''} style="margin-top:3px;">
+          <span style="font-size:13.5px;${c.done?'text-decoration:line-through;color:var(--text-faint);':''}"><strong style="color:var(--forest);font-size:11.5px;text-transform:uppercase;">${escapeHtml(c.category)}</strong><br>${escapeHtml(c.idea)}</span>
+        </label>`).join('')}
+    </div>`).join('');
+}
+function wireBrollActions(root){
+  root.querySelector('#addBrollCatBtn')?.addEventListener('click', async ()=>{
+    const name = prompt('Name der neuen Kategorie:');
+    if(!name || !name.trim()) return;
+    await saveBrollCat({id:uid(), name:name.trim(), count:0, lastFilmed:null, notes:''});
+    root.querySelector('#brollCatsWrap').innerHTML = brollCatsListHtml();
+    wireBrollActions(root);
+  });
+  root.querySelectorAll('[data-delbroll]').forEach(b=> b.addEventListener('click', async ()=>{
+    if(confirm('Diese Kategorie wirklich löschen?')){ await deleteBrollCat(b.getAttribute('data-delbroll')); root.querySelector('#brollCatsWrap').innerHTML = brollCatsListHtml(); wireBrollActions(root); }
+  }));
+  root.querySelectorAll('[data-incbroll]').forEach(b=> b.addEventListener('click', async ()=>{
+    const cat = State.brollCats.find(c=>c.id===b.getAttribute('data-incbroll'));
+    if(!cat) return;
+    cat.count = (cat.count||0)+1;
+    cat.lastFilmed = nowISO();
+    await saveBrollCat(cat);
+    root.querySelector('#brollCatsWrap').innerHTML = brollCatsListHtml();
+    wireBrollActions(root);
+  }));
+  root.querySelectorAll('[data-brollnote]').forEach(inp=> inp.addEventListener('change', async ()=>{
+    const cat = State.brollCats.find(c=>c.id===inp.getAttribute('data-brollnote'));
+    if(!cat) return;
+    cat.notes = inp.value;
+    await saveBrollCat(cat);
+    toast('Gespeichert.');
+  }));
+  root.querySelector('#genShotListBtn')?.addEventListener('click', async (e)=>{
+    const errBox = root.querySelector('#shotListErrorBox');
+    errBox.style.display = 'none';
+    if(!hasApiKey()){ toast('Bitte hinterlege zuerst in den Einstellungen einen Anthropic API-Key.'); return; }
+    e.target.disabled = true; const orig = e.target.textContent; e.target.textContent = 'Erstelle deine Drehliste ...';
+    function extractObj(raw){
+      let json = raw.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+      try{ return JSON.parse(json); }
+      catch(parseErr){
+        const match = json.match(/\{[\s\S]*\}/);
+        if(match) return JSON.parse(match[0]);
+        throw new Error('Antwort war kein gültiges JSON: "' + raw.slice(0,180) + '"');
+      }
+    }
+    try{
+      let parsed, lastErr;
+      for(let attempt=0; attempt<2 && !parsed; attempt++){
+        try{
+          const raw = await callClaude(shotListSystemPrompt(State.productInfo, State.brollCats), [{role:'user', content: attempt===0 ? 'Bitte erstelle die Drehliste.' : 'Bitte nochmal, nur das JSON-Objekt, keine Rückfrage.'}], 1200);
+          parsed = extractObj(raw);
+        }catch(err){ lastErr = err; }
+      }
+      if(!parsed) throw lastErr;
+      parsed = sanitizeDeep(parsed);
+      if(!parsed.clips || !Array.isArray(parsed.clips)) throw new Error('Antwort enthielt keine Clip-Liste.');
+      const list = {id:uid(), createdAt:nowISO(), clips: parsed.clips.map(c=> Object.assign({done:false}, c))};
+      await saveShotList(list);
+      root.querySelector('#shotListsWrap').innerHTML = shotListsHtml();
+      wireBrollActions(root);
+      toast('Drehliste erstellt.');
+    }catch(err){
+      errBox.textContent = 'Drehliste konnte nicht erstellt werden: ' + err.message;
+      errBox.style.display = 'block';
+    }
+    e.target.disabled = false; e.target.textContent = orig;
+  });
+  root.querySelectorAll('[data-delshotlist]').forEach(b=> b.addEventListener('click', async ()=>{
+    if(confirm('Diese Drehliste wirklich löschen?')){ await deleteShotList(b.getAttribute('data-delshotlist')); root.querySelector('#shotListsWrap').innerHTML = shotListsHtml(); wireBrollActions(root); }
+  }));
+  root.querySelectorAll('[data-shotdone]').forEach(cb=> cb.addEventListener('change', async ()=>{
+    const [listId, idx] = cb.getAttribute('data-shotdone').split(':');
+    const list = State.shotLists.find(l=>l.id===listId);
+    if(!list) return;
+    list.clips[parseInt(idx)].done = cb.checked;
+    await saveShotList(list);
+    root.querySelector('#shotListsWrap').innerHTML = shotListsHtml();
+    wireBrollActions(root);
+  }));
+}
+
+function introsListHtml(){
+  const intros = State.scripts.filter(s=>s.format==='intro');
+  if(!intros.length) return `<p style="color:var(--text-faint);font-size:13.5px;">Noch kein Intro-Baustein erstellt.</p>`;
+  return intros.map(s=>{
+    const hashtagLine = (s.hashtags && s.hashtags.length) ? s.hashtags.map(h=>'#'+h.replace(/^#/,'')).join(' ') : '';
+    return `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span class="pill">👋 Intro · ${fmtDateShort(s.createdAt)}</span>
+        <div style="display:flex;gap:8px;">
+          ${s.posted ? `<span class="pill" style="background:var(--sage);color:#fff;">✓ Gepostet</span>` : `<button class="btn btn-ghost" data-postscript="${s.id}" style="font-size:11.5px;padding:5px 12px;">Als gepostet markieren</button>`}
+          <button class="star-btn" data-delscript="${s.id}" title="Löschen">✕</button>
+        </div>
+      </div>
+      ${s.tagline ? `<p style="font-family:var(--font-display);font-size:15px;color:var(--forest);margin:10px 0 0;">„${escapeHtml(s.tagline)}"</p>` : ''}
+      ${scriptFieldBlock('Visual Hook', s.hookVisual)}
+      ${scriptFieldBlock('Speak Hook', s.hookSpeak)}
+      ${scriptFieldBlock('Kontext', s.kontext)}
+      ${scriptFieldBlock('Twist (aber)', s.twist)}
+      ${scriptFieldBlock('Auflösung (deshalb)', s.aufloesung)}
+      ${scriptFieldBlock('Ende', s.ende)}
+      ${scriptFieldBlock('CTA', s.cta)}
+      ${s.highlightText ? `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">
+        <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;">Für dein "Über mich"-Highlight</div>
+        <div style="font-size:13.8px;line-height:1.6;">${escapeHtml(s.highlightText)}</div>
+      </div>` : ''}
+      ${s.warumText ? `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">
+        <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;">Für dein "Mein Warum"-Highlight</div>
+        <div style="font-size:13.8px;line-height:1.6;">${escapeHtml(s.warumText)}</div>
+      </div>` : ''}
+      ${s.caption ? `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">
+        <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;">Caption</div>
+        <div style="font-size:13.8px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(s.caption)}</div>
+        ${hashtagLine ? `<div style="font-size:12.5px;color:var(--sage-dark);margin-top:8px;line-height:1.6;">${escapeHtml(hashtagLine)}</div>` : ''}
+        <button class="btn btn-ghost" data-copycaption="${s.id}" style="margin-top:10px;font-size:11.5px;padding:5px 12px;">Caption + Hashtags kopieren</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+function wireIntroActions(root){
+  wireVoiceButton(root.querySelector('#introMicBtn'), root.querySelector('#introExtra'));
+  root.querySelector('#genIntroBtn')?.addEventListener('click', async (e)=>{
+    const extra = root.querySelector('#introExtra').value.trim();
+    const errBox = root.querySelector('#introErrorBox');
+    errBox.style.display = 'none';
+    if(!hasApiKey()){ toast('Bitte hinterlege zuerst in den Einstellungen einen Anthropic API-Key.'); return; }
+    e.target.disabled = true; const orig = e.target.textContent; e.target.textContent = 'Erstelle deinen Intro-Baustein ...';
+    function extractJson(raw){
+      let json = raw.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+      try{ return JSON.parse(json); }
+      catch(parseErr){
+        const match = json.match(/\{[\s\S]*\}/);
+        if(match) return JSON.parse(match[0]);
+        throw new Error('Antwort war kein gültiges JSON: "' + raw.slice(0,180) + '"');
+      }
+    }
+    try{
+      let parsed, lastErr;
+      for(let attempt=0; attempt<2 && !parsed; attempt++){
+        try{
+          const content = attempt===0 ? 'Bitte erstelle den Intro-Baustein.' : 'Bitte nochmal, nur das JSON-Objekt, keine Rückfrage.';
+          const raw = await callClaude(introSystemPrompt(State.productInfo, extra), [{role:'user', content}], 1400);
+          parsed = extractJson(raw);
+        }catch(err){ lastErr = err; }
+      }
+      if(!parsed) throw lastErr;
+      const script = Object.assign({id:uid(), topic:'Intro-Baustein', framework:'eine', format:'intro', createdAt:nowISO(), posted:false, postedDate:null}, sanitizeDeep(parsed));
+      await saveScript(script);
+      root.querySelector('#introsWrap').innerHTML = introsListHtml();
+      wireScriptActions(root.querySelector('#introsWrap'));
+      toast('Intro-Baustein erstellt.');
+    }catch(err){
+      errBox.textContent = 'Konnte nicht erstellt werden: ' + err.message;
+      errBox.style.display = 'block';
+    }
+    e.target.disabled = false; e.target.textContent = orig;
+  });
 }
 
 /* ============================= JOURNAL ============================= */
