@@ -808,6 +808,8 @@ async function fixSpelling(text){
 }
 function wireSpellingFixButton(btn, inputEl){
   if(!btn || !inputEl) return;
+  if(btn.dataset.fixWired) return;
+  btn.dataset.fixWired = '1';
   btn.addEventListener('click', async ()=>{
     const text = inputEl.value.trim();
     if(!text){ toast('Erst etwas eintragen.'); return; }
@@ -2320,26 +2322,37 @@ function speechSupported(){ return !!(window.SpeechRecognition || window.webkitS
 function micButtonHtml(id){ return `<button type="button" class="mic-btn" id="${id}" title="Spracheingabe">${ICONS.mic}</button>`; }
 function wireVoiceButton(btn, targetEl, onFinal){
   if(!btn || !targetEl) return;
+  if(btn.dataset.voiceWired){ return; } // prevent attaching duplicate listeners if this element persists across re-renders
+  btn.dataset.voiceWired = '1';
   if(!speechSupported()){
     btn.addEventListener('click', ()=> toast('Spracheingabe wird von diesem Browser leider nicht unterstützt (funktioniert z.B. in Chrome oder Edge).'));
     btn.style.opacity = '0.45';
     return;
   }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognizing = false, recognition = null, baseValue = '';
-  btn.addEventListener('click', ()=>{
-    if(recognizing){ recognition && recognition.stop(); return; }
+  let recognizing = false, recognition = null, baseValue = '', manualStop = false;
+
+  function startRecognition(){
     recognition = new SR();
     recognition.lang = 'de-DE';
     recognition.interimResults = true;
     recognition.continuous = true;
-    baseValue = targetEl.value || '';
     recognition.onstart = ()=>{ recognizing = true; btn.classList.add('recording'); btn.title = 'Aufnahme läuft — antippen zum Beenden'; };
     recognition.onerror = (e)=>{
+      if(e.error==='no-speech'){ return; }
+      if(e.error==='aborted'){ manualStop = true; return; }
+      manualStop = true;
       recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe';
-      if(e.error!=='no-speech' && e.error!=='aborted') toast('Spracheingabe fehlgeschlagen. Prüfe die Mikrofon-Berechtigung.');
+      toast('Spracheingabe fehlgeschlagen. Prüfe die Mikrofon-Berechtigung.');
     };
-    recognition.onend = ()=>{ recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe'; };
+    recognition.onend = ()=>{
+      if(!manualStop){
+        // browser stopped it on its own (common timeout on mobile) — resume seamlessly so long dictation keeps working
+        baseValue = targetEl.value || '';
+        try{ startRecognition(); return; }catch(err){}
+      }
+      recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe';
+    };
     recognition.onresult = (e)=>{
       let sessionText = '';
       for(let i=0;i<e.results.length;i++){ sessionText += (i>0?' ':'') + e.results[i][0].transcript; }
@@ -2350,7 +2363,14 @@ function wireVoiceButton(btn, targetEl, onFinal){
       targetEl.dispatchEvent(new Event('input'));
       if(onFinal) onFinal(targetEl.value);
     };
-    try{ recognition.start(); }catch(err){ toast('Spracheingabe konnte nicht gestartet werden.'); }
+    recognition.start();
+  }
+
+  btn.addEventListener('click', ()=>{
+    if(recognizing){ manualStop = true; recognition && recognition.stop(); return; }
+    manualStop = false;
+    baseValue = targetEl.value || '';
+    try{ startRecognition(); }catch(err){ toast('Spracheingabe konnte nicht gestartet werden.'); }
   });
 }
 
