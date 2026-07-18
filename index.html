@@ -2330,49 +2330,34 @@ function wireVoiceButton(btn, targetEl, onFinal){
     return;
   }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognizing = false, recognition = null, manualStop = false, restartTimer = null;
+  let recognizing = false, recognition = null, baseValue = '';
 
-  function startRecognition(){
+  btn.addEventListener('click', ()=>{
+    if(recognizing){ recognition && recognition.stop(); return; }
     recognition = new SR();
     recognition.lang = 'de-DE';
-    recognition.interimResults = false; // only final results — avoids duplicate/overlapping text from continuous mode quirks on mobile
-    recognition.continuous = false;     // one clean utterance per instance, then we chain a fresh instance ourselves
-    let gotResult = false;
+    recognition.interimResults = true;
+    recognition.continuous = true; // let the browser itself keep the session open — restarting via JS needs a fresh tap on mobile, so we don't fight that here
+    baseValue = targetEl.value || '';
     recognition.onstart = ()=>{ recognizing = true; btn.classList.add('recording'); btn.title = 'Aufnahme läuft — antippen zum Beenden'; };
     recognition.onerror = (e)=>{
-      if(e.error==='no-speech' || e.error==='aborted'){ return; } // benign — onend will follow and we may chain again
-      manualStop = true;
+      if(e.error!=='no-speech' && e.error!=='aborted') toast('Spracheingabe fehlgeschlagen. Prüfe die Mikrofon-Berechtigung.');
+    };
+    recognition.onend = ()=>{
       recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe';
-      toast('Spracheingabe fehlgeschlagen. Prüfe die Mikrofon-Berechtigung.');
+      // if the browser cut the session short on its own, a fresh tap on the mic resumes right where you left off — text already said is kept
     };
     recognition.onresult = (e)=>{
-      gotResult = true;
-      let text = '';
-      for(let i=0;i<e.results.length;i++){ text += (i>0?' ':'') + e.results[i][0].transcript; }
-      text = text.trim();
-      if(!text) return;
-      const current = targetEl.value || '';
-      const sep = current && !/[\s\n]$/.test(current) ? ' ' : '';
-      targetEl.value = current + sep + text;
+      let sessionText = '';
+      for(let i=0;i<e.results.length;i++){ sessionText += (i>0?' ':'') + e.results[i][0].transcript; }
+      sessionText = sessionText.trim();
+      if(!sessionText) return;
+      const sep = baseValue && !/[\s\n]$/.test(baseValue) ? ' ' : '';
+      targetEl.value = baseValue + sep + sessionText;
       targetEl.dispatchEvent(new Event('input'));
       if(onFinal) onFinal(targetEl.value);
     };
-    recognition.onend = ()=>{
-      if(manualStop){ recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe'; return; }
-      // chain the next utterance automatically so it feels like one continuous recording, with no time limit
-      clearTimeout(restartTimer);
-      restartTimer = setTimeout(()=>{
-        if(manualStop) return;
-        try{ startRecognition(); }catch(err){ recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe'; }
-      }, 150);
-    };
-    recognition.start();
-  }
-
-  btn.addEventListener('click', ()=>{
-    if(recognizing){ manualStop = true; clearTimeout(restartTimer); recognition && recognition.stop(); return; }
-    manualStop = false;
-    try{ startRecognition(); }catch(err){ toast('Spracheingabe konnte nicht gestartet werden.'); }
+    try{ recognition.start(); }catch(err){ toast('Spracheingabe konnte nicht gestartet werden.'); }
   });
 }
 
