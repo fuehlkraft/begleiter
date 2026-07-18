@@ -2330,46 +2330,48 @@ function wireVoiceButton(btn, targetEl, onFinal){
     return;
   }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognizing = false, recognition = null, baseValue = '', manualStop = false;
+  let recognizing = false, recognition = null, manualStop = false, restartTimer = null;
 
   function startRecognition(){
     recognition = new SR();
     recognition.lang = 'de-DE';
-    recognition.interimResults = true;
-    recognition.continuous = true;
+    recognition.interimResults = false; // only final results — avoids duplicate/overlapping text from continuous mode quirks on mobile
+    recognition.continuous = false;     // one clean utterance per instance, then we chain a fresh instance ourselves
+    let gotResult = false;
     recognition.onstart = ()=>{ recognizing = true; btn.classList.add('recording'); btn.title = 'Aufnahme läuft — antippen zum Beenden'; };
     recognition.onerror = (e)=>{
-      if(e.error==='no-speech'){ return; }
-      if(e.error==='aborted'){ manualStop = true; return; }
+      if(e.error==='no-speech' || e.error==='aborted'){ return; } // benign — onend will follow and we may chain again
       manualStop = true;
       recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe';
       toast('Spracheingabe fehlgeschlagen. Prüfe die Mikrofon-Berechtigung.');
     };
-    recognition.onend = ()=>{
-      if(!manualStop){
-        // browser stopped it on its own (common timeout on mobile) — resume seamlessly so long dictation keeps working
-        baseValue = targetEl.value || '';
-        try{ startRecognition(); return; }catch(err){}
-      }
-      recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe';
-    };
     recognition.onresult = (e)=>{
-      let sessionText = '';
-      for(let i=0;i<e.results.length;i++){ sessionText += (i>0?' ':'') + e.results[i][0].transcript; }
-      sessionText = sessionText.trim();
-      if(!sessionText) return;
-      const sep = baseValue && !/[\s\n]$/.test(baseValue) ? ' ' : '';
-      targetEl.value = baseValue + sep + sessionText;
+      gotResult = true;
+      let text = '';
+      for(let i=0;i<e.results.length;i++){ text += (i>0?' ':'') + e.results[i][0].transcript; }
+      text = text.trim();
+      if(!text) return;
+      const current = targetEl.value || '';
+      const sep = current && !/[\s\n]$/.test(current) ? ' ' : '';
+      targetEl.value = current + sep + text;
       targetEl.dispatchEvent(new Event('input'));
       if(onFinal) onFinal(targetEl.value);
+    };
+    recognition.onend = ()=>{
+      if(manualStop){ recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe'; return; }
+      // chain the next utterance automatically so it feels like one continuous recording, with no time limit
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(()=>{
+        if(manualStop) return;
+        try{ startRecognition(); }catch(err){ recognizing = false; btn.classList.remove('recording'); btn.title = 'Spracheingabe'; }
+      }, 150);
     };
     recognition.start();
   }
 
   btn.addEventListener('click', ()=>{
-    if(recognizing){ manualStop = true; recognition && recognition.stop(); return; }
+    if(recognizing){ manualStop = true; clearTimeout(restartTimer); recognition && recognition.stop(); return; }
     manualStop = false;
-    baseValue = targetEl.value || '';
     try{ startRecognition(); }catch(err){ toast('Spracheingabe konnte nicht gestartet werden.'); }
   });
 }
