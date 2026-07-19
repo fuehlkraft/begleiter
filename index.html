@@ -1919,6 +1919,7 @@ function renderChat(root){
           ${micButtonHtml('chatMicBtn')}
           <button class="send-btn" id="sendBtn">${ICONS.send}</button>
         </div>`}
+        <div id="chatBottomAnchor" style="height:1px;"></div>
       </div>
     </div>`;
 
@@ -1995,7 +1996,14 @@ function renderMessages(){
     scroll.innerHTML += `<div class="typing"><span></span><span></span><span></span></div>`;
   }
   scroll.scrollTop = scroll.scrollHeight;
-  window.scrollTo(0, document.body.scrollHeight);
+  const anchor = document.getElementById('chatBottomAnchor');
+  if(anchor){
+    anchor.scrollIntoView({behavior:'auto', block:'end'});
+    // extra nudge so content clears the fixed mobile input bar, which overlays the viewport's bottom edge
+    window.scrollBy(0, 180);
+  } else {
+    window.scrollTo(0, document.body.scrollHeight);
+  }
 }
 
 function renderCrisisInline(){
