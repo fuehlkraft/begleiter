@@ -1169,11 +1169,15 @@ function treeSvg(points, opts){
 
   let svg = `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;display:block;margin:0 auto;">`;
 
-  // sky/ambient
+  // sky/ambient — a clear sun (disc + rays), placed in the corner so it never reads as rain
   if(stage>=4){
-    for(let i=0;i<5;i++){
-      const rx = cx - canopyR*1.4 + i*(canopyR*0.7);
-      svg += `<line x1="${rx}" y1="${trunkTopY-canopyR-14}" x2="${rx-14}" y2="${trunkTopY-canopyR*1.7-14}" stroke="${sm.accent}" stroke-width="2" opacity="0.35" stroke-linecap="round"/>`;
+    const sunX = w - 46, sunY = 42;
+    svg += `<circle cx="${sunX}" cy="${sunY}" r="14" fill="#F7D97E" opacity="0.9"/>`;
+    for(let i=0;i<8;i++){
+      const ang = (i/8)*Math.PI*2;
+      const x1 = sunX + Math.cos(ang)*19, y1 = sunY + Math.sin(ang)*19;
+      const x2 = sunX + Math.cos(ang)*26, y2 = sunY + Math.sin(ang)*26;
+      svg += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#F7D97E" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/>`;
     }
   }
   if(season==='winter'){
@@ -1225,15 +1229,19 @@ function treeSvg(points, opts){
     svg += `<circle cx="${cx}" cy="${trunkTopY-canopyR*0.6}" r="${canopyR*0.55}" fill="${sm.canopy}"/>`;
   }
 
-  // blossoms/flowers (stage 3+, spring/summer stronger)
+  // blossoms/flowers (stage 3+, spring/summer stronger) — organically scattered, not a perfect ring
   if(stage>=3){
     const blossomN = Math.min(4+stage, 14);
     for(let i=0;i<blossomN;i++){
-      const ang = (i/blossomN)*Math.PI*2 + 0.4;
-      const rad = canopyR*0.55;
+      const seed = (i*37.13) % 1;
+      const seed2 = (i*71.7) % 1;
+      const ang = (i/blossomN)*Math.PI*2 + seed*0.9;
+      const rad = canopyR*(0.32 + seed2*0.38);
       const px = cx + Math.cos(ang)*rad;
-      const py = trunkTopY - canopyR*0.6 + Math.sin(ang)*rad*0.7;
-      svg += `<circle cx="${px}" cy="${py}" r="3" fill="${sm.accent}"/>`;
+      const py = trunkTopY - canopyR*0.6 + Math.sin(ang)*rad*0.75;
+      const r = 2 + seed*1.8;
+      const color = i%3===0 ? '#FBEFE3' : sm.accent;
+      svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r.toFixed(1)}" fill="${color}" opacity="0.95"/>`;
     }
   }
   // caterpillars — the beginning of the metamorphosis (stage 2+)
@@ -1252,10 +1260,10 @@ function treeSvg(points, opts){
     const butterflyN = Math.min(1 + (stage-3), 5);
     for(let i=0;i<butterflyN;i++){
       const ang = (i/butterflyN)*Math.PI*1.5 - 0.4;
-      const rad = canopyR + 14 + (i%2)*10;
+      const rad = Math.min(canopyR + 24 + (i%2)*16, w*0.4);
       const bx = cx + Math.cos(ang)*rad;
       const by = trunkTopY - canopyR*0.7 + Math.sin(ang)*rad*0.55;
-      const size = 3.4 + (i%3)*0.4;
+      const size = 5.2 + (i%3)*0.9;
       const [w1,w2] = wingPairs[i%wingPairs.length];
       svg += butterflyGroup(bx, by, size, flyClasses[i%flyClasses.length], i*0.9, w1, w2);
     }
